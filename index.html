@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM — Prospecção</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
+    --text: #1a1a18; --text2: #6b6b68; --text3: #a3a39f;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --radius: 8px; --radius-lg: 12px;
+    --blue-bg: #E6F1FB; --blue-text: #185FA5;
+    --amber-bg: #FAEEDA; --amber-text: #854F0B;
+    --green-bg: #EAF3DE; --green-text: #3B6D11;
+    --red-bg: #FCEBEB; --red-text: #A32D2D;
+    --purple-bg: #EEEDFE; --purple-text: #534AB7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #242422; --bg3: #2e2e2b;
+      --text: #f0ede8; --text2: #9e9b96; --text3: #6b6966;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --blue-bg: #0c2a45; --blue-text: #85B7EB;
+      --amber-bg: #3a2200; --amber-text: #FAC775;
+      --green-bg: #152608; --green-text: #97C459;
+      --red-bg: #2e0d0d; --red-text: #F09595;
+      --purple-bg: #1e1a40; --purple-text: #AFA9EC;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+  #app { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { padding: 7px 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+  .btn:hover { background: var(--bg2); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn.primary:hover { opacity: 0.85; }
+  .btn.active { background: var(--bg2); border-color: var(--border2); }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 12px 14px; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-value { font-size: 22px; font-weight: 600; }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .alert-banner { background: var(--amber-bg); border: 1px solid var(--amber-text); border-radius: var(--radius); padding: 9px 14px; margin-bottom: 1rem; font-size: 13px; color: var(--amber-text); }
+  .filters { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .filters input, .filters select { padding: 8px 11px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); }
+  .filters input { flex: 1; min-width: 160px; }
+  .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 700px) { .kanban { grid-template-columns: 1fr; } }
+  .col { background: var(--bg2); border-radius: var(--radius-lg); padding: 12px; min-height: 260px; }
+  .col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .col-name { font-size: 13px; font-weight: 600; }
+  .col-count { font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; color: var(--text2); }
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+  .card:hover { border-color: var(--border2); }
+  .card-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .card-empresa { font-size: 12px; color: var(--text2); margin-bottom: 7px; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .card-val { font-size: 12px; color: var(--text2); }
+  .date-badge { font-size: 11px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+  .date-ok { background: var(--green-bg); color: var(--green-text); }
+  .date-today { background: var(--amber-bg); color: var(--amber-text); }
+  .date-late { background: var(--red-bg); color: var(--red-text); }
+  .date-none { background: var(--bg2); color: var(--text3); }
+  .move-btns { display: flex; gap: 4px; margin-top: 8px; }
+  .move-btn { font-size: 11px; padding: 2px 7px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--text2); cursor: pointer; }
+  .move-btn:hover { background: var(--bg2); }
+  .table-wrap { overflow-x: auto; background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text2); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; background: var(--bg2); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); cursor: pointer; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .badge-lead { background: var(--blue-bg); color: var(--blue-text); }
+  .badge-contato { background: var(--amber-bg); color: var(--amber-text); }
+  .badge-quali { background: var(--green-bg); color: var(--green-text); }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border2); box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .modal-head h2 { font-size: 16px; font-weight: 600; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .tab { padding: 7px 14px; font-size: 13px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--blue-text); }
+  .field textarea { height: 68px; resize: vertical; }
+  .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 480px) { .modal-row { grid-template-columns: 1fr; } }
+  .modal-actions { display: flex; gap: 8px; margin-top: 1rem; justify-content: flex-end; }
+  .del-btn { margin-right: auto; color: var(--red-text); border-color: var(--red-bg); background: transparent; }
+  .del-btn:hover { background: var(--red-bg); }
+  .hist-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; }
+  .hist-item { background: var(--bg2); border-radius: var(--radius); padding: 10px 12px; }
+  .hist-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .hist-date { font-size: 11px; color: var(--text2); margin-left: auto; }
+  .hist-del { font-size: 11px; color: var(--red-text); cursor: pointer; border: none; background: none; font-family: inherit; padding: 0; }
+  .hist-del:hover { text-decoration: underline; }
+  .hist-texto { font-size: 13px; }
+  .hist-add { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+  .hist-add textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); height: 62px; resize: vertical; margin-bottom: 8px; }
+  .hist-add-row { display: flex; gap: 8px; }
+  .hist-add-row select { flex: 1; padding: 7px 10px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); }
+  .hist-tipo-ligacao { background: var(--blue-bg); color: var(--blue-text); }
+  .hist-tipo-email { background: var(--green-bg); color: var(--green-text); }
+  .hist-tipo-reuniao { background: var(--purple-bg); color: var(--purple-text); }
+  .hist-tipo-nota { background: var(--bg2); color: var(--text2); }
+  .empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const STAGES=['Lead','Contato feito','Qualificação'];
+const SBADGE={'Lead':'badge-lead','Contato feito':'badge-contato','Qualificação':'badge-quali'};
+const SSHORT={'Lead':'Lead','Contato feito':'Contato','Qualificação':'Qualif.'};
+const TIPOS=['Nota','Ligação','E-mail','Reunião'];
+const TIPO_CLS={'Ligação':'hist-tipo-ligacao','E-mail':'hist-tipo-email','Reunião':'hist-tipo-reuniao','Nota':'hist-tipo-nota'};
+
+function load(){try{return JSON.parse(localStorage.getItem('crm_v2')||'[]')}catch{return[]}}
+function save(d){localStorage.setItem('crm_v2',JSON.stringify(d))}
+
+let prospects=load();
+let view='kanban';
+let modal=null;
+let editId=null;
+let modalTab='dados';
+let newHistTxt='';
+let newHistTipo='Nota';
+let filterSearch='';
+let filterStage='';
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function fmt(v){if(!v||isNaN(v))return'—';return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function today(){return new Date().toISOString().slice(0,10)}
+function fmtDate(d){if(!d)return null;const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`}
+function dateStatus(d){if(!d)return'none';const t=today();if(d<t)return'late';if(d===t)return'today';return'ok'}
+function dateLabel(d){if(!d)return'Sem data';const s=dateStatus(d);if(s==='late')return'Atrasado: '+fmtDate(d);if(s==='today')return'Hoje';return fmtDate(d)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:'Lead',notas:'',proximoContato:'',historico:[]};newHistTxt='';newHistTipo='Nota';render()}
+function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';render()}
+function closeModal(){modal=null;editId=null;render()}
+function saveModal(){
+  if(!modal.nome.trim()){alert('Nome é obrigatório');return}
+  if(editId){prospects=prospects.map(p=>p.id===editId?{...modal,id:editId}:p)}
+  else{prospects=[...prospects,{...modal,id:uid(),criadoEm:today()}]}
+  save(prospects);closeModal()
+}
+function deleteProspect(){if(!editId)return;if(!confirm('Excluir este prospect?'))return;prospects=prospects.filter(p=>p.id!==editId);save(prospects);closeModal()}
+function moveStage(id,dir,e){if(e)e.stopPropagation();prospects=prospects.map(p=>{if(p.id!==id)return p;const i=STAGES.indexOf(p.stage);const ni=i+dir;if(ni<0||ni>=STAGES.length)return p;return{...p,stage:STAGES[ni]}});save(prospects);render()}
+function setField(k,v){modal={...modal,[k]:v}}
+function setView(v){view=v;render()}
+function setTab(t){modalTab=t;render()}
+function addHist(){if(!newHistTxt.trim())return;const h={id:uid(),data:today(),tipo:newHistTipo,texto:newHistTxt.trim()};modal.historico=[h,...(modal.historico||[])];newHistTxt='';render()}
+function delHist(hid){modal.historico=(modal.historico||[]).filter(h=>h.id!==hid);render()}
+
+function exportCSV(){
+  const cols=['Nome','Empresa','Contato','E-mail','Telefone','Etapa','Valor','Próximo Contato','Notas','Criado em'];
+  const rows=prospects.map(p=>[p.nome,p.empresa,p.contato,p.email,p.telefone,p.stage,p.valor||'',fmtDate(p.proximoContato)||'',p.notas,fmtDate(p.criadoEm)||p.criadoEm||'']);
+  const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='prospects.csv';a.click()
+}
+
+function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;return matchS&&matchSt})}
+
+function render(){
+  const app=document.getElementById('app');
+  const all=prospects;
+  const vis=filtered();
+  const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const byCnt=STAGES.map(s=>all.filter(p=>p.stage===s).length);
+  const late=all.filter(p=>p.proximoContato&&dateStatus(p.proximoContato)==='late').length;
+  const todayC=all.filter(p=>p.proximoContato&&dateStatus(p.proximoContato)==='today').length;
+
+  let html=`<div class="header">
+    <h1>📋 CRM — Prospecção</h1>
+    <div class="actions">
+      <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">Kanban</button>
+      <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">Lista</button>
+      <button class="btn" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <button class="btn primary" onclick="openNew()">+ Novo prospect</button>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${all.length}</div><div class="metric-sub">prospects</div></div>
+    <div class="metric"><div class="metric-label">Por etapa</div><div class="metric-value" style="font-size:16px;padding-top:4px">${byCnt.join(' · ')}</div><div class="metric-sub">Lead · Contato · Qualif.</div></div>
+    <div class="metric"><div class="metric-label">Contatos hoje</div><div class="metric-value" style="color:${todayC>0?'var(--amber-text)':'inherit'}">${todayC}</div><div class="metric-sub">${late>0?`${late} atrasado${late>1?'s':''}`:'Sem atraso'}</div></div>
+    <div class="metric"><div class="metric-label">Pipeline estimado</div><div class="metric-value" style="font-size:15px;padding-top:4px">${fmt(totalVal)}</div><div class="metric-sub">total</div></div>
+  </div>`;
+
+  if(late>0||todayC>0){const msgs=[];if(late>0)msgs.push(`${late} prospect${late>1?'s':''} com contato atrasado`);if(todayC>0)msgs.push(`${todayC} agendado${todayC>1?'s':''} para hoje`);html+=`<div class="alert-banner">⚠️ ${msgs.join(' · ')}</div>`;}
+
+  html+=`<div class="filters">
+    <input placeholder="Buscar por nome ou empresa..." oninput="filterSearch=this.value;renderContent()" value="${esc(filterSearch)}">
+    <select onchange="filterStage=this.value;renderContent()">
+      <option value="">Todas as etapas</option>
+      ${STAGES.map(s=>`<option value="${s}"${filterStage===s?' selected':''}>${s}</option>`).join('')}
+    </select>
+    ${(filterSearch||filterStage)?`<button class="btn" onclick="filterSearch='';filterStage='';render()">&#x2715; Limpar</button>`:''}
+  </div><div id="content-area"></div>`;
+
+  app.innerHTML=html;
+  renderContent();
+
+  if(modal){
+    const ov=document.createElement('div');
+    ov.className='overlay';
+    let mhtml=`<div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2>${editId?'Editar prospect':'Novo prospect'}</h2><button class="btn" style="padding:4px 10px" onclick="closeModal()">✕</button></div>
+      <div class="tabs"><div class="tab${modalTab==='dados'?' active':''}" onclick="setTab('dados')">Dados</div><div class="tab${modalTab==='hist'?' active':''}" onclick="setTab('hist')">Histórico${modal.historico&&modal.historico.length?' ('+modal.historico.length+')':''}</div></div>`;
+    if(modalTab==='dados'){
+      mhtml+=`<div class="modal-row">
+        <div class="field"><label>Nome *</label><input value="${esc(modal.nome)}" oninput="setField('nome',this.value)" placeholder="Nome do responsável"/></div>
+        <div class="field"><label>Empresa</label><input value="${esc(modal.empresa)}" oninput="setField('empresa',this.value)" placeholder="Razão social"/></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>Cargo / contato</label><input value="${esc(modal.contato)}" oninput="setField('contato',this.value)" placeholder="Cargo ou função"/></div>
+        <div class="field"><label>Telefone</label><input value="${esc(modal.telefone)}" oninput="setField('telefone',this.value)" placeholder="(xx) xxxxx-xxxx"/></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>E-mail</label><input value="${esc(modal.email)}" oninput="setField('email',this.value)" placeholder="email@empresa.com"/></div>
+        <div class="field"><label>Valor estimado (R$)</label><input type="number" value="${esc(modal.valor)}" oninput="setField('valor',this.value)" placeholder="0"/></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>Etapa</label><select oninput="setField('stage',this.value)">${STAGES.map(s=>`<option value="${s}"${modal.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Próximo contato</label><input type="date" value="${esc(modal.proximoContato)}" oninput="setField('proximoContato',this.value)"/></div>
+      </div>
+      <div class="field"><label>Notas</label><textarea oninput="setField('notas',this.value)" placeholder="Observações, próximos passos...">${esc(modal.notas)}</textarea></div>`;
+    } else {
+      const hist=modal.historico||[];
+      mhtml+=`<div class="hist-list">`;
+      if(!hist.length)mhtml+=`<div class="empty">Nenhuma interação registrada ainda</div>`;
+      hist.forEach(h=>{mhtml+=`<div class="hist-item"><div class="hist-meta"><span class="badge ${TIPO_CLS[h.tipo]||'hist-tipo-nota'}">${h.tipo}</span><span class="hist-date">${fmtDate(h.data)||h.data}</span><button class="hist-del" onclick="delHist('${h.id}')">remover</button></div><div class="hist-texto">${esc(h.texto)}</div></div>`;});
+      mhtml+=`</div><div class="hist-add"><textarea id="hist-txt" placeholder="Descreva a interação..." oninput="newHistTxt=this.value">${esc(newHistTxt)}</textarea><div class="hist-add-row"><select id="hist-tipo" onchange="newHistTipo=this.value">${TIPOS.map(t=>`<option value="${t}"${newHistTipo===t?' selected':''}>${t}</option>`).join('')}</select><button class="btn primary" onclick="addHist()">+ Registrar</button></div></div>`;
+    }
+    mhtml+=`<div class="modal-actions">${editId?`<button class="btn del-btn" onclick="deleteProspect()">🗑 Excluir</button>`:''}<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="saveModal()">Salvar</button></div></div>`;
+    ov.innerHTML=mhtml;
+    ov.addEventListener('click',closeModal);
+    app.appendChild(ov);
+  }
+}
+
+function renderContent(){
+  const area=document.getElementById('content-area');
+  if(!area)return;
+  const vis=filtered();
+  let html='';
+  if(view==='kanban'){
+    html+=`<div class="kanban">`;
+    STAGES.forEach((stage,si)=>{
+      const cards=vis.filter(p=>p.stage===stage);
+      html+=`<div class="col"><div class="col-head"><span class="col-name">${stage}</span><span class="col-count">${cards.length}</span></div>`;
+      if(!cards.length)html+=`<div class="empty">Nenhum prospect</div>`;
+      cards.forEach(p=>{
+        const ds=dateStatus(p.proximoContato);
+        const dcls={late:'date-late',today:'date-today',ok:'date-ok',none:'date-none'}[ds];
+        html+=`<div class="card" onclick="openEdit('${p.id}')">
+          <div class="card-name">${esc(p.nome)}</div>
+          <div class="card-empresa">${esc(p.empresa)||'—'}</div>
+          <div class="card-footer">
+            <span class="card-val">${fmt(p.valor)}</span>
+            <span class="date-badge ${dcls}">${dateLabel(p.proximoContato)}</span>
+          </div>
+          <div class="move-btns" onclick="event.stopPropagation()">
+            ${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">← ${SSHORT[STAGES[si-1]]}</button>`:''}
+            ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${SSHORT[STAGES[si+1]]} →</button>`:''}
+          </div>
+        </div>`;
+      });
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  } else {
+    html+=`<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Empresa</th><th>Etapa</th><th>Valor</th><th>Próximo contato</th><th>Histórico</th><th>Ações</th></tr></thead><tbody>`;
+    if(!vis.length)html+=`<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum prospect encontrado</td></tr>`;
+    vis.forEach(p=>{
+      const si=STAGES.indexOf(p.stage);
+      const ds=dateStatus(p.proximoContato);
+      const dcls={late:'date-late',today:'date-today',ok:'date-ok',none:'date-none'}[ds];
+      const hl=(p.historico||[]).length;
+      html+=`<tr onclick="openEdit('${p.id}')">
+        <td style="font-weight:600">${esc(p.nome)}</td>
+        <td style="color:var(--text2)">${esc(p.empresa)||'—'}</td>
+        <td><span class="badge ${SBADGE[p.stage]}">${p.stage}</span></td>
+        <td>${fmt(p.valor)}</td>
+        <td><span class="date-badge ${dcls}">${dateLabel(p.proximoContato)}</span></td>
+        <td style="color:var(--text2);font-size:12px">${hl?hl+' registro'+(hl>1?'s':''):'—'}</td>
+        <td onclick="event.stopPropagation()"><div class="move-btns">
+          ${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">← ${SSHORT[STAGES[si-1]]}</button>`:''}
+          ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${SSHORT[STAGES[si+1]]} →</button>`:''}
+        </div></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  }
+  area.innerHTML=html;
+}
+
+render();
+</script>
+</body>
+</html>
