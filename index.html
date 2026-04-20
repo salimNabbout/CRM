@@ -4,177 +4,251 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM — Prospecção</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#F7F6F3;--surface:#FFFFFF;--surface2:#F0EEE9;
+  --bg:#F4F3F0;--surface:#FFFFFF;--surface2:#EDECE8;--surface3:#E6E4DF;
   --text:#1C1917;--text2:#78716C;--text3:#A8A29E;
-  --border:#E7E5E0;--border2:#D4D0C8;
+  --border:#E2E0DA;--border2:#CCC9C0;
   --accent:#1C1917;--accent-fg:#FFFFFF;
-  --blue:#2563EB;--blue-bg:#EFF6FF;--blue-mid:#BFDBFE;
+  --blue:#2563EB;--blue-bg:#EFF6FF;--blue-mid:#BFDBFE;--blue-light:#DBEAFE;
   --amber:#D97706;--amber-bg:#FFFBEB;--amber-mid:#FDE68A;
   --green:#16A34A;--green-bg:#F0FDF4;--green-mid:#BBF7D0;
   --red:#DC2626;--red-bg:#FEF2F2;--red-mid:#FECACA;
   --purple:#7C3AED;--purple-bg:#F5F3FF;--purple-mid:#DDD6FE;
-  --radius:10px;--radius-lg:14px;--radius-xl:18px;
-  --shadow:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg:0 20px 40px rgba(0,0,0,0.12),0 8px 16px rgba(0,0,0,0.06);
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+  --shadow:0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,0.10),0 2px 6px rgba(0,0,0,0.05);
+  --shadow-lg:0 24px 48px rgba(0,0,0,0.14),0 8px 20px rgba(0,0,0,0.08);
+  --topbar-h:68px;
 }
-@media(prefers-color-scheme:dark){:root{
-  --bg:#141412;--surface:#1E1D1A;--surface2:#272522;
-  --text:#F5F3EF;--text2:#A09B95;--text3:#6B6560;
-  --border:#2E2B26;--border2:#3D3930;
-  --blue:#3B82F6;--blue-bg:#1E2D4A;--blue-mid:#1E3A5F;
-  --amber:#F59E0B;--amber-bg:#2D2200;--amber-mid:#3D2E00;
-  --green:#22C55E;--green-bg:#0D2818;--green-mid:#14391F;
-  --red:#F87171;--red-bg:#2D0D0D;--red-mid:#3D1010;
-  --purple:#A78BFA;--purple-bg:#1E1040;--purple-mid:#2D1A5C;
+html.dark{
+  --bg:#111110;--surface:#1A1917;--surface2:#222120;--surface3:#2A2927;
+  --text:#F5F3EF;--text2:#9C968F;--text3:#655F59;
+  --border:#2A2824;--border2:#38342E;
+  --blue:#3B82F6;--blue-bg:#1A2A44;--blue-mid:#1E3A5F;--blue-light:#162338;
+  --amber:#F59E0B;--amber-bg:#281F00;--amber-mid:#3D2E00;
+  --green:#22C55E;--green-bg:#0C2416;--green-mid:#14391F;
+  --red:#F87171;--red-bg:#280C0C;--red-mid:#3D1010;
+  --purple:#A78BFA;--purple-bg:#1C1038;--purple-mid:#2D1A5C;
+}
+html.dark *{font-weight:400}
+@media(prefers-color-scheme:dark){html:not(.light){
+  --bg:#111110;--surface:#1A1917;--surface2:#222120;--surface3:#2A2927;
+  --text:#F5F3EF;--text2:#9C968F;--text3:#655F59;
+  --border:#2A2824;--border2:#38342E;
+  --blue:#3B82F6;--blue-bg:#1A2A44;--blue-mid:#1E3A5F;--blue-light:#162338;
+  --amber:#F59E0B;--amber-bg:#281F00;--amber-mid:#3D2E00;
+  --green:#22C55E;--green-bg:#0C2416;--green-mid:#14391F;
+  --red:#F87171;--red-bg:#280C0C;--red-mid:#3D1010;
+  --purple:#A78BFA;--purple-bg:#1C1038;--purple-mid:#2D1A5C;
 }}
+@media(prefers-color-scheme:dark){html:not(.light) *{font-weight:400}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
-#app{max-width:1140px;margin:0 auto;padding:2rem 1.5rem}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:12px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Topbar */
+#topbar-wrap{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:box-shadow 0.2s}
+#topbar-wrap.scrolled{box-shadow:0 2px 12px rgba(0,0,0,0.08)}
+.topbar{display:flex;align-items:center;justify-content:space-between;max-width:1180px;margin:0 auto;padding:0 1.5rem;height:var(--topbar-h);flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-icon{width:38px;height:38px;background:var(--accent);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.18)}
 .brand-icon svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
-.brand-sub{font-size:12px;color:var(--text3);font-weight:400;font-family:'Inter',sans-serif}
+.brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-0.4px}
+.brand-sub{font-size:11.5px;color:var(--text3);font-weight:400;margin-top:1px}
 .topbar-actions{display:flex;gap:8px;align-items:center}
+
+/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;line-height:1}
-.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn:hover{background:var(--surface2)}
+.btn:active{transform:scale(0.97)}
 .btn svg{width:14px;height:14px;flex-shrink:0}
-.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.btn.primary:hover{opacity:0.88}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.18)}
+.btn.primary:hover{opacity:0.86;box-shadow:0 3px 10px rgba(0,0,0,0.2)}
 .btn.ghost{border-color:transparent;background:transparent}
 .btn.ghost:hover{background:var(--surface2)}
-.btn.active{background:var(--surface2);border-color:var(--border2);box-shadow:inset 0 1px 2px rgba(0,0,0,0.06)}
+.btn.active{background:var(--surface);border-color:var(--border2);box-shadow:inset 0 1px 2px rgba(0,0,0,0.06)}
 .view-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;gap:2px}
-.view-toggle .btn{padding:5px 12px;border:none;background:transparent;border-radius:7px;font-size:12px}
+.view-toggle .btn{padding:5px 12px;border:none;background:transparent;border-radius:8px;font-size:12px}
 .view-toggle .btn.active{background:var(--surface);box-shadow:var(--shadow)}
+
+/* Main content */
+#app{max-width:1180px;margin:0 auto;padding:2rem 1.5rem}
+
+/* Metrics */
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
 @media(max-width:700px){.metrics{grid-template-columns:repeat(2,1fr)}}
-.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
-.metric.m-total::before{background:linear-gradient(90deg,#1C1917,#57534E)}
-.metric.m-stages::before{background:linear-gradient(90deg,#3B82F6,#7C3AED)}
-.metric.m-today::before{background:linear-gradient(90deg,#F59E0B,#EF4444)}
-.metric.m-pipeline::before{background:linear-gradient(90deg,#16A34A,#0D9488)}
-.metric-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px}
-.metric-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:700;color:var(--text);line-height:1;margin-bottom:4px}
-.metric-value.sm{font-size:16px;padding-top:5px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:box-shadow 0.2s,transform 0.2s}
+.metric:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.metric-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
+.metric.m-total .metric-accent{background:linear-gradient(90deg,#1C1917 0%,#57534E 100%)}
+.metric.m-stages .metric-accent{background:linear-gradient(90deg,#3B82F6 0%,#7C3AED 100%)}
+.metric.m-today .metric-accent{background:linear-gradient(90deg,#F59E0B 0%,#EF4444 100%)}
+.metric.m-pipeline .metric-accent{background:linear-gradient(90deg,#16A34A 0%,#0D9488 100%)}
+.metric-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.metric-icon svg{width:16px;height:16px}
+.mi-total{background:var(--surface2);color:var(--text2)}
+.mi-stages{background:var(--blue-bg);color:var(--blue)}
+.mi-today{background:var(--amber-bg);color:var(--amber)}
+.mi-pipeline{background:var(--green-bg);color:var(--green)}
+.metric-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px}
+.metric-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;font-weight:800;color:var(--text);line-height:1;margin-bottom:3px}
+.metric-value.sm{font-size:17px;padding-top:4px}
 .metric-sub{font-size:12px;color:var(--text3)}
-.alert{display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid var(--amber-mid);border-radius:var(--radius);padding:10px 14px;margin-bottom:1.25rem;font-size:13px;color:var(--amber);font-weight:500}
+
+/* Alert */
+.alert{display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid var(--amber-mid);border-radius:var(--radius);padding:11px 15px;margin-bottom:1.25rem;font-size:13px;color:var(--amber);font-weight:500;animation:slideDown 0.2s ease}
 .alert svg{width:16px;height:16px;flex-shrink:0}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Filters */
 .filters{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
 .search-wrap{flex:1;min-width:200px;position:relative}
 .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text3);pointer-events:none}
-.search-wrap input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);transition:border-color 0.15s;box-shadow:var(--shadow)}
-.search-wrap input:focus{outline:none;border-color:var(--blue)}
-.filters select{padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);cursor:pointer;box-shadow:var(--shadow)}
-.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+.search-wrap input{width:100%;padding:9px 12px 9px 35px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);transition:border-color 0.15s,box-shadow 0.15s;box-shadow:var(--shadow)}
+.search-wrap input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
+.filters select{padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);cursor:pointer;box-shadow:var(--shadow);transition:border-color 0.15s}
+.filters select:focus{outline:none;border-color:var(--blue)}
+
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
 @media(max-width:700px){.kanban{grid-template-columns:1fr}}
 .col{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xl);padding:14px;min-height:300px}
+.col-lead{border-top:3px solid var(--blue)}
+.col-contato{border-top:3px solid var(--amber)}
+.col-quali{border-top:3px solid var(--green)}
+.col-reuniao{border-top:3px solid var(--purple)}
 .col-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.dot-lead{background:#3B82F6}
-.dot-contato{background:#F59E0B}
-.dot-quali{background:#16A34A}
+.dot-lead{background:var(--blue)}
+.dot-contato{background:var(--amber)}
+.dot-quali{background:var(--green)}
+.dot-reuniao{background:var(--purple)}
 .col-name{font-size:13px;font-weight:600;color:var(--text);flex:1}
-.col-count{font-size:11px;font-weight:600;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:2px 9px;color:var(--text2)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;box-shadow:var(--shadow)}
-.card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.col-count{font-size:11px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:2px 9px;color:var(--text2)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow)}
+.card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.card:active{transform:translateY(0);box-shadow:var(--shadow)}
 .card:last-child{margin-bottom:0}
-.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
-.card-avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+.card-avatar{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;letter-spacing:0.3px}
 .av-blue{background:var(--blue-bg);color:var(--blue)}
 .av-amber{background:var(--amber-bg);color:var(--amber)}
 .av-green{background:var(--green-bg);color:var(--green)}
 .av-purple{background:var(--purple-bg);color:var(--purple)}
 .av-red{background:var(--red-bg);color:var(--red)}
 .card-info{flex:1;min-width:0}
-.card-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
 .card-empresa{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-divider{height:1px;background:var(--border);margin:10px 0}
 .card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .card-val{font-size:12px;font-weight:600;color:var(--text2)}
-.date-badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:99px}
+.date-badge{font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px}
 .date-ok{background:var(--green-bg);color:var(--green)}
 .date-today{background:var(--amber-bg);color:var(--amber)}
 .date-late{background:var(--red-bg);color:var(--red)}
 .date-none{color:var(--text3);font-size:11px}
 .move-btns{display:flex;gap:4px;margin-top:10px}
-.move-btn{font-size:11px;font-weight:500;padding:4px 9px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:3px}
-.move-btn:hover{background:var(--surface2);border-color:var(--border2)}
+.move-btn{font-size:11px;font-weight:500;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:3px}
+.move-btn:hover{background:var(--surface2);border-color:var(--border2);color:var(--text)}
 .empty-col{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;color:var(--text3)}
-.empty-col svg{width:28px;height:28px;margin-bottom:8px;opacity:0.4}
+.empty-col svg{width:28px;height:28px;margin-bottom:8px;opacity:0.35}
 .empty-col span{font-size:13px}
+
+/* Table */
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead{background:var(--surface2)}
-th{text-align:left;padding:11px 16px;border-bottom:1px solid var(--border);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
-td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+th{text-align:left;padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
+td{padding:13px 16px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tbody tr{transition:background 0.1s;cursor:pointer}
+tbody tr{transition:background 0.12s;cursor:pointer}
 tbody tr:hover td{background:var(--surface2)}
 .td-name{font-weight:600}
 .td-company{color:var(--text2)}
-.badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;display:inline-flex;align-items:center;gap:5px}
-.badge::before{content:'';width:6px;height:6px;border-radius:50%}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;display:inline-flex;align-items:center;gap:5px}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .badge-lead{background:var(--blue-bg);color:var(--blue)}
 .badge-lead::before{background:var(--blue)}
 .badge-contato{background:var(--amber-bg);color:var(--amber)}
 .badge-contato::before{background:var(--amber)}
 .badge-quali{background:var(--green-bg);color:var(--green)}
 .badge-quali::before{background:var(--green)}
+.badge-reuniao{background:var(--purple-bg);color:var(--purple)}
+.badge-reuniao::before{background:var(--purple)}
 .td-hist{font-size:12px;color:var(--text3)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:300;padding:1rem}
-.modal{background:var(--surface);border-radius:var(--radius-xl);padding:0;width:500px;max-width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border);box-shadow:var(--shadow-lg)}
-.modal-top{padding:20px 24px 0;border-bottom:1px solid var(--border);margin-bottom:0}
-.modal-top h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:700;color:var(--text);margin-bottom:14px}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:300;padding:1rem;animation:fadeIn 0.18s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border-radius:var(--radius-xl);padding:0;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border);box-shadow:var(--shadow-lg);animation:slideUp 0.22s cubic-bezier(0.34,1.2,0.64,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-top{padding:22px 24px 0;border-bottom:1px solid var(--border)}
+.modal-top h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:14px;letter-spacing:-0.3px}
 .tabs{display:flex;gap:0}
-.tab{padding:9px 16px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s}
+.tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
-.modal-body{padding:20px 24px}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px}
-.field input,.field select,.field textarea{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);transition:border-color 0.15s}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);background:var(--surface)}
-.field textarea{height:72px;resize:vertical}
+.modal-body{padding:22px 24px}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 13px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);transition:border-color 0.15s,box-shadow 0.15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);background:var(--surface);box-shadow:0 0 0 3px var(--blue-light)}
+.field textarea{height:76px;resize:vertical}
 .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:480px){.modal-row{grid-template-columns:1fr}}
-.modal-footer{display:flex;gap:8px;padding:16px 24px;border-top:1px solid var(--border);justify-content:flex-end}
+.modal-footer{display:flex;gap:8px;padding:16px 24px;border-top:1px solid var(--border);justify-content:flex-end;background:var(--surface2);border-radius:0 0 var(--radius-xl) var(--radius-xl)}
 .del-btn{margin-right:auto;color:var(--red);border-color:var(--red-mid);background:transparent}
 .del-btn:hover{background:var(--red-bg)}
+
+/* History */
 .hist-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
-.hist-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
-.hist-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.hist-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;transition:border-color 0.15s}
+.hist-item:hover{border-color:var(--border2)}
+.hist-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 .hist-date{font-size:11px;color:var(--text3);margin-left:auto}
-.hist-del{font-size:11px;color:var(--red);cursor:pointer;border:none;background:none;font-family:inherit;padding:0;font-weight:500}
-.hist-del:hover{text-decoration:underline}
-.hist-texto{font-size:13px;color:var(--text);line-height:1.5}
-.hist-add{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
-.hist-add textarea{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);height:64px;resize:vertical;margin-bottom:10px}
+.hist-del{font-size:11px;color:var(--red);cursor:pointer;border:none;background:none;font-family:inherit;padding:0;font-weight:500;opacity:0.7}
+.hist-del:hover{opacity:1;text-decoration:underline}
+.hist-texto{font-size:13px;color:var(--text);line-height:1.55}
+.hist-add{border-top:1px solid var(--border);padding-top:16px;margin-top:4px}
+.hist-add textarea{width:100%;padding:9px 13px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);height:68px;resize:vertical;margin-bottom:10px;transition:border-color 0.15s,box-shadow 0.15s}
+.hist-add textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
 .hist-add-row{display:flex;gap:8px}
 .hist-add-row select{flex:1;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)}
-.htag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.htag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px}
 .ht-ligacao{background:var(--blue-bg);color:var(--blue)}
 .ht-email{background:var(--green-bg);color:var(--green)}
 .ht-reuniao{background:var(--purple-bg);color:var(--purple)}
 .ht-nota{background:var(--surface2);color:var(--text2)}
-.empty{display:flex;flex-direction:column;align-items:center;padding:2.5rem;color:var(--text3)}
-.empty svg{width:32px;height:32px;margin-bottom:10px;opacity:0.35}
+
+/* Empty states */
+.empty{display:flex;flex-direction:column;align-items:center;padding:3rem;color:var(--text3)}
+.empty svg{width:36px;height:36px;margin-bottom:12px;opacity:0.3}
 .empty span{font-size:13px}
 </style>
 </head>
 <body>
+
+<div id="topbar-wrap">
+  <div class="topbar" id="topbar"></div>
+</div>
 <div id="app"></div>
+
 <script>
-const STAGES=['Lead','Contato feito','Qualificação'];
-const SBADGE={'Lead':'badge-lead','Contato feito':'badge-contato','Qualificação':'badge-quali'};
-const SSHORT={'Lead':'Lead','Contato feito':'Contato','Qualificação':'Qualif.'};
-const SDOT={'Lead':'dot-lead','Contato feito':'dot-contato','Qualificação':'dot-quali'};
+const STAGES=['Lead','Contato feito','Qualificação','Reunião Agendada'];
+const SBADGE={'Lead':'badge-lead','Contato feito':'badge-contato','Qualificação':'badge-quali','Reunião Agendada':'badge-reuniao'};
+const SSHORT={'Lead':'Lead','Contato feito':'Contato','Qualificação':'Qualif.','Reunião Agendada':'Reunião'};
+const SDOT={'Lead':'dot-lead','Contato feito':'dot-contato','Qualificação':'dot-quali','Reunião Agendada':'dot-reuniao'};
+const SCOL={'Lead':'col-lead','Contato feito':'col-contato','Qualificação':'col-quali','Reunião Agendada':'col-reuniao'};
 const TIPOS=['Nota','Ligação','E-mail','Reunião'];
 const TIPO_CLS={'Ligação':'ht-ligacao','E-mail':'ht-email','Reunião':'ht-reuniao','Nota':'ht-nota'};
 const AV_COLORS=['av-blue','av-amber','av-green','av-purple','av-red'];
@@ -196,17 +270,17 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function initials(nome){const p=(nome||'').trim().split(' ');return(p[0]?.[0]||'')+(p[1]?.[0]||'').toUpperCase()||'?'}
 function avColor(id){const h=id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);return AV_COLORS[h%AV_COLORS.length]}
 
-function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:'Lead',notas:'',proximoContato:'',historico:[]};newHistTxt='';newHistTipo='Nota';render()}
-function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';render()}
-function closeModal(){modal=null;editId=null;render()}
-function saveModal(){if(!modal.nome.trim()){alert('Nome é obrigatório');return}if(editId){prospects=prospects.map(p=>p.id===editId?{...modal,id:editId}:p)}else{prospects=[...prospects,{...modal,id:uid(),criadoEm:today()}]}save(prospects);closeModal()}
-function deleteProspect(){if(!editId)return;if(!confirm('Excluir este prospect?'))return;prospects=prospects.filter(p=>p.id!==editId);save(prospects);closeModal()}
-function moveStage(id,dir,e){if(e)e.stopPropagation();prospects=prospects.map(p=>{if(p.id!==id)return p;const i=STAGES.indexOf(p.stage);const ni=i+dir;if(ni<0||ni>=STAGES.length)return p;return{...p,stage:STAGES[ni]}});save(prospects);render()}
+function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:'Lead',notas:'',proximoContato:'',historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
+function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';renderModal()}
+function closeModal(){modal=null;editId=null;const ov=document.getElementById('modal-overlay');if(ov)ov.remove()}
+function saveModal(){if(!modal.nome.trim()){alert('Nome é obrigatório');return}if(editId){prospects=prospects.map(p=>p.id===editId?{...modal,id:editId}:p)}else{prospects=[...prospects,{...modal,id:uid(),criadoEm:today()}]}save(prospects);closeModal();renderFull()}
+function deleteProspect(){if(!editId)return;if(!confirm('Excluir este prospect?'))return;prospects=prospects.filter(p=>p.id!==editId);save(prospects);closeModal();renderFull()}
+function moveStage(id,dir,e){if(e)e.stopPropagation();prospects=prospects.map(p=>{if(p.id!==id)return p;const i=STAGES.indexOf(p.stage);const ni=i+dir;if(ni<0||ni>=STAGES.length)return p;return{...p,stage:STAGES[ni]}});save(prospects);renderContent()}
 function setField(k,v){modal={...modal,[k]:v}}
-function setView(v){view=v;render()}
-function setTab(t){modalTab=t;render()}
-function addHist(){if(!newHistTxt.trim())return;const h={id:uid(),data:today(),tipo:newHistTipo,texto:newHistTxt.trim()};modal.historico=[h,...(modal.historico||[])];newHistTxt='';render()}
-function delHist(hid){modal.historico=(modal.historico||[]).filter(h=>h.id!==hid);render()}
+function setView(v){view=v;renderTopbar();renderContent()}
+function setTab(t){modalTab=t;renderModal()}
+function addHist(){if(!newHistTxt.trim())return;const h={id:uid(),data:today(),tipo:newHistTipo,texto:newHistTxt.trim()};modal.historico=[h,...(modal.historico||[])];newHistTxt='';renderModal()}
+function delHist(hid){modal.historico=(modal.historico||[]).filter(h=>h.id!==hid);renderModal()}
 function exportCSV(){const cols=['Nome','Empresa','Contato','E-mail','Telefone','Etapa','Valor','Próximo Contato','Notas','Criado em'];const rows=prospects.map(p=>[p.nome,p.empresa,p.contato,p.email,p.telefone,p.stage,p.valor||'',fmtDateFull(p.proximoContato)||'',p.notas,fmtDateFull(p.criadoEm)||p.criadoEm||'']);const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='prospects.csv';a.click()}
 function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;return matchS&&matchSt})}
 
@@ -222,92 +296,121 @@ const ICONS={
   grid:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
   list:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
   trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`,
-  close:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+  close:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  sun:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+  moon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+  users:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  layers:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
+  clock:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  trending:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
 };
 
-function render(){
+// Theme toggle
+let theme=localStorage.getItem('crm_theme')||'auto';
+function applyTheme(){
+  const prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const isDark=theme==='dark'||(theme==='auto'&&prefersDark);
+  document.documentElement.classList.toggle('dark',isDark);
+  document.documentElement.classList.toggle('light',theme==='light');
+}
+function toggleTheme(){
+  const prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const isDark=theme==='dark'||(theme==='auto'&&prefersDark);
+  theme=isDark?'light':'dark';
+  localStorage.setItem('crm_theme',theme);
+  applyTheme();
+  renderTopbar();
+}
+applyTheme();
+
+// Sticky topbar scroll effect
+window.addEventListener('scroll',()=>{
+  const tw=document.getElementById('topbar-wrap');
+  if(tw)tw.classList.toggle('scrolled',window.scrollY>10);
+});
+
+function renderTopbar(){
+  const all=prospects;
+  document.getElementById('topbar').innerHTML=`
+    <div class="brand">
+      <div class="brand-icon">${ICONS.logo}</div>
+      <div>
+        <div class="brand-text">CRM Prospecção</div>
+        <div class="brand-sub">${all.length} prospect${all.length!==1?'s':''} no pipeline</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="view-toggle">
+        <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">${ICONS.grid} Kanban</button>
+        <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button>
+      </div>
+      <button class="btn ghost" onclick="toggleTheme()" title="Alternar tema" style="padding:7px 10px">${document.documentElement.classList.contains('dark')?ICONS.sun:ICONS.moon}</button>
+      <button class="btn ghost" onclick="exportCSV()">${ICONS.download} CSV</button>
+      <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo prospect</button>
+    </div>`;
+}
+
+function renderFull(){
+  renderTopbar();
   const app=document.getElementById('app');
-  const all=prospects,vis=filtered();
+  const all=prospects;
   const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
   const byCnt=STAGES.map(s=>all.filter(p=>p.stage===s).length);
   const late=all.filter(p=>p.proximoContato&&dateStatus(p.proximoContato)==='late').length;
   const todayC=all.filter(p=>p.proximoContato&&dateStatus(p.proximoContato)==='today').length;
 
   let html=`
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-icon">${'${ICONS.logo}'}</div>
-      <div>
-        <div class="brand-text">CRM Prospecção</div>
-        <div class="brand-sub">${'${all.length}'} prospect${'${all.length!==1?"s":""}'} no pipeline</div>
-      </div>
-    </div>
-    <div class="topbar-actions">
-      <div class="view-toggle">
-        <button class="btn${'${view===\'kanban\'?\' active\':\'\'}'" onclick="setView('kanban')">${'${ICONS.grid}'} Kanban</button>
-        <button class="btn${'${view===\'lista\'?\' active\':\'\'}'" onclick="setView('lista')">${'${ICONS.list}'} Lista</button>
-      </div>
-      <button class="btn ghost" onclick="exportCSV()">${'${ICONS.download}'} CSV</button>
-      <button class="btn primary" onclick="openNew()">${'${ICONS.plus}'} Novo prospect</button>
-    </div>
-  </div>`;
-  app.innerHTML='loading';
-  renderFull();
-}
-
-function renderFull(){
-  const app=document.getElementById('app');
-  const all=prospects,vis=filtered();
-  const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
-  const byCnt=STAGES.map(s=>all.filter(p=>p.stage===s).length);
-  const late=all.filter(p=>p.proximoContato&&dateStatus(p.proximoContato)==='late').length;
-  const todayC=all.filter(p=>p.proximoContato&&dateStatus(p.proximoContato)==='today').length;
-
-  let html=`<div class="topbar">
-    <div class="brand"><div class="brand-icon">${ICONS.logo}</div><div><div class="brand-text">CRM Prospecção</div><div class="brand-sub">${all.length} prospect${all.length!==1?'s':''} no pipeline</div></div></div>
-    <div class="topbar-actions">
-      <div class="view-toggle"><button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">${ICONS.grid} Kanban</button><button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button></div>
-      <button class="btn ghost" onclick="exportCSV()">${ICONS.download} CSV</button>
-      <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo prospect</button>
-    </div></div>
   <div class="metrics">
-    <div class="metric m-total"><div class="metric-label">Total</div><div class="metric-value">${all.length}</div><div class="metric-sub">prospects ativos</div></div>
-    <div class="metric m-stages"><div class="metric-label">Por etapa</div><div class="metric-value sm">${byCnt[0]} <span style="color:var(--text3);font-size:14px">·</span> ${byCnt[1]} <span style="color:var(--text3);font-size:14px">·</span> ${byCnt[2]}</div><div class="metric-sub">Lead · Contato · Qualif.</div></div>
-    <div class="metric m-today"><div class="metric-label">Contatos hoje</div><div class="metric-value" style="${todayC>0?'color:var(--amber)':''}">${todayC}</div><div class="metric-sub">${late>0?`<span style="color:var(--red);font-weight:600">${late} atrasado${late>1?'s':''}</span>`:'Em dia ✓'}</div></div>
-    <div class="metric m-pipeline"><div class="metric-label">Pipeline estimado</div><div class="metric-value sm">${fmt(totalVal)}</div><div class="metric-sub">valor total</div></div>
+    <div class="metric m-total">
+      <div class="metric-accent"></div>
+      <div class="metric-icon mi-total">${ICONS.users}</div>
+      <div class="metric-label">Total</div>
+      <div class="metric-value">${all.length}</div>
+      <div class="metric-sub">prospects ativos</div>
+    </div>
+    <div class="metric m-stages">
+      <div class="metric-accent"></div>
+      <div class="metric-icon mi-stages">${ICONS.layers}</div>
+      <div class="metric-label">Por etapa</div>
+      <div class="metric-value sm">${byCnt[0]} <span style="color:var(--text3);font-size:13px">·</span> ${byCnt[1]} <span style="color:var(--text3);font-size:13px">·</span> ${byCnt[2]} <span style="color:var(--text3);font-size:13px">·</span> ${byCnt[3]}</div>
+      <div class="metric-sub">Lead · Contato · Qualif. · Reunião</div>
+    </div>
+    <div class="metric m-today">
+      <div class="metric-accent"></div>
+      <div class="metric-icon mi-today">${ICONS.clock}</div>
+      <div class="metric-label">Contatos hoje</div>
+      <div class="metric-value" style="${todayC>0?'color:var(--amber)':''}">${todayC}</div>
+      <div class="metric-sub">${late>0?`<span style="color:var(--red);font-weight:600">${late} atrasado${late>1?'s':''}</span>`:'Em dia ✓'}</div>
+    </div>
+    <div class="metric m-pipeline">
+      <div class="metric-accent"></div>
+      <div class="metric-icon mi-pipeline">${ICONS.trending}</div>
+      <div class="metric-label">Pipeline estimado</div>
+      <div class="metric-value sm">${fmt(totalVal)}</div>
+      <div class="metric-sub">valor total</div>
+    </div>
   </div>`;
 
-  if(late>0||todayC>0){const msgs=[];if(late>0)msgs.push(`${late} prospect${late>1?'s':''} com contato atrasado`);if(todayC>0)msgs.push(`${todayC} contato${todayC>1?'s':''} agendado${todayC>1?'s':''} para hoje`);html+=`<div class="alert">${ICONS.warn} ${msgs.join(' &nbsp;·&nbsp; ')}</div>`;}
+  if(late>0||todayC>0){
+    const msgs=[];
+    if(late>0)msgs.push(`${late} prospect${late>1?'s':''} com contato atrasado`);
+    if(todayC>0)msgs.push(`${todayC} contato${todayC>1?'s':''} para hoje`);
+    html+=`<div class="alert">${ICONS.warn} ${msgs.join(' &nbsp;·&nbsp; ')}</div>`;
+  }
 
-  html+=`<div class="filters"><div class="search-wrap">${ICONS.search}<input placeholder="Buscar por nome ou empresa..." oninput="filterSearch=this.value;renderContent()" value="${esc(filterSearch)}"></div><select onchange="filterStage=this.value;renderContent()">
-    <option value="">Todas as etapas</option>${STAGES.map(s=>`<option value="${s}"${filterStage===s?' selected':''}>${s}</option>`).join('')}
-  </select>${(filterSearch||filterStage)?`<button class="btn ghost" onclick="filterSearch='';filterStage='';renderFull()">Limpar filtro</button>`:''}</div><div id="content-area"></div>`;
+  html+=`<div class="filters">
+    <div class="search-wrap">${ICONS.search}<input placeholder="Buscar por nome ou empresa..." oninput="filterSearch=this.value;renderContent()" value="${esc(filterSearch)}"></div>
+    <select onchange="filterStage=this.value;renderContent()">
+      <option value="">Todas as etapas</option>
+      ${STAGES.map(s=>`<option value="${s}"${filterStage===s?' selected':''}>${s}</option>`).join('')}
+    </select>
+    ${(filterSearch||filterStage)?`<button class="btn ghost" onclick="filterSearch='';filterStage='';renderFull()">Limpar filtro</button>`:''}
+  </div>
+  <div id="content-area"></div>`;
 
   app.innerHTML=html;
   renderContent();
-
-  if(modal){
-    const ov=document.createElement('div');
-    ov.className='overlay';
-    const hl=(modal.historico||[]).length;
-    let mhtml=`<div class="modal" onclick="event.stopPropagation()"><div class="modal-top"><div style="display:flex;align-items:center;justify-content:space-between"><h2>${editId?esc(modal.nome)||'Editar prospect':'Novo prospect'}</h2><button class="btn ghost" style="padding:5px" onclick="closeModal()">${ICONS.close}</button></div><div class="tabs"><div class="tab${modalTab==='dados'?' active':''}" onclick="setTab('dados')">Dados</div><div class="tab${modalTab==='hist'?' active':''}" onclick="setTab('hist')">Histórico${hl?` (${hl})`:''}</div></div></div><div class="modal-body">`;
-    if(modalTab==='dados'){
-      mhtml+=`<div class="modal-row"><div class="field"><label>Nome *</label><input value="${esc(modal.nome)}" oninput="setField('nome',this.value)" placeholder="Nome do responsável"></div><div class="field"><label>Empresa</label><input value="${esc(modal.empresa)}" oninput="setField('empresa',this.value)" placeholder="Razão social"></div></div><div class="modal-row"><div class="field"><label>Cargo</label><input value="${esc(modal.contato)}" oninput="setField('contato',this.value)" placeholder="Cargo ou função"></div><div class="field"><label>Telefone</label><input value="${esc(modal.telefone)}" oninput="setField('telefone',this.value)" placeholder="(xx) xxxxx-xxxx"></div></div><div class="modal-row"><div class="field"><label>E-mail</label><input value="${esc(modal.email)}" oninput="setField('email',this.value)" placeholder="email@empresa.com"></div><div class="field"><label>Valor estimado (R$)</label><input type="number" value="${esc(modal.valor)}" oninput="setField('valor',this.value)" placeholder="0"></div></div><div class="modal-row"><div class="field"><label>Etapa</label><select oninput="setField('stage',this.value)">${STAGES.map(s=>`<option value="${s}"${modal.stage===s?' selected':''}>${s}</option>`).join('')}</select></div><div class="field"><label>Próximo contato</label><input type="date" value="${esc(modal.proximoContato)}" oninput="setField('proximoContato',this.value)"></div></div><div class="field"><label>Notas</label><textarea oninput="setField('notas',this.value)" placeholder="Observações, próximos passos...">${esc(modal.notas)}</textarea></div>`;
-    } else {
-      const hist=modal.historico||[];
-      mhtml+=`<div class="hist-list">`;
-      if(!hist.length)mhtml+=`<div class="empty">${ICONS.empty}<span>Nenhuma interação registrada</span></div>`;
-      hist.forEach(h=>{mhtml+=`<div class="hist-item"><div class="hist-meta"><span class="htag ${TIPO_CLS[h.tipo]||'ht-nota'}">${h.tipo}</span><span class="hist-date">${fmtDateFull(h.data)||h.data}</span><button class="hist-del" onclick="delHist('${h.id}')">remover</button></div><div class="hist-texto">${esc(h.texto)}</div></div>`;});
-      mhtml+=`</div><div class="hist-add"><textarea placeholder="Descreva a interação..." oninput="newHistTxt=this.value">${esc(newHistTxt)}</textarea><div class="hist-add-row"><select onchange="newHistTipo=this.value">${TIPOS.map(t=>`<option value="${t}"${newHistTipo===t?' selected':''}>${t}</option>`).join('')}</select><button class="btn primary" onclick="addHist()">${ICONS.plus} Registrar</button></div></div>`;
-    }
-    mhtml+=`</div><div class="modal-footer">${editId?`<button class="btn del-btn" onclick="deleteProspect()">${ICONS.trash} Excluir</button>`:''}<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="saveModal()">Salvar</button></div></div>`;
-    ov.innerHTML=mhtml;
-    ov.addEventListener('click',closeModal);
-    app.appendChild(ov);
-  }
 }
-
-function render(){renderFull()}
 
 function renderContent(){
   const area=document.getElementById('content-area');
@@ -318,33 +421,161 @@ function renderContent(){
     html+=`<div class="kanban">`;
     STAGES.forEach((stage,si)=>{
       const cards=vis.filter(p=>p.stage===stage);
-      html+=`<div class="col"><div class="col-head"><span class="col-dot ${SDOT[stage]}"></span><span class="col-name">${stage}</span><span class="col-count">${cards.length}</span></div>`;
-      if(!cards.length){html+=`<div class="empty-col">${ICONS.empty}<span>Nenhum prospect</span></div>`;}else{
+      html+=`<div class="col ${SCOL[stage]}">
+        <div class="col-head">
+          <span class="col-dot ${SDOT[stage]}"></span>
+          <span class="col-name">${stage}</span>
+          <span class="col-count">${cards.length}</span>
+        </div>`;
+      if(!cards.length){
+        html+=`<div class="empty-col">${ICONS.empty}<span>Nenhum prospect</span></div>`;
+      } else {
         cards.forEach(p=>{
           const ds=dateStatus(p.proximoContato);
           const dl=dateLabel(p.proximoContato);
           const av=avColor(p.id);
-          html+=`<div class="card" onclick="openEdit('${p.id}')"><div class="card-header"><div class="card-avatar ${av}">${esc(initials(p.nome))}</div><div class="card-info"><div class="card-name">${esc(p.nome)}</div><div class="card-empresa">${esc(p.empresa)||'—'}</div></div></div><div class="card-divider"></div><div class="card-footer"><span class="card-val">${fmt(p.valor)}</span>${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span class="date-none">Sem data</span>`}</div><div class="move-btns" onclick="event.stopPropagation()">${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">${ICONS.arrowL} ${SSHORT[STAGES[si-1]]}</button>`:''} ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${SSHORT[STAGES[si+1]]} ${ICONS.arrowR}</button>`:''}</div></div>`;
+          const hl=(p.historico||[]).length;
+          html+=`<div class="card" onclick="openEdit('${p.id}')">
+            <div class="card-header">
+              <div class="card-avatar ${av}">${esc(initials(p.nome))}</div>
+              <div class="card-info">
+                <div class="card-name">${esc(p.nome)}</div>
+                <div class="card-empresa">${esc(p.empresa)||'—'}</div>
+              </div>
+            </div>
+            <div class="card-divider"></div>
+            <div class="card-footer">
+              <span class="card-val">${fmt(p.valor)}</span>
+              ${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span class="date-none">Sem data</span>`}
+            </div>
+            ${hl?`<div style="margin-top:8px;font-size:11px;color:var(--text3)">${hl} interaç${hl>1?'ões':'ão'}</div>`:''}
+            <div class="move-btns" onclick="event.stopPropagation()">
+              ${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">${ICONS.arrowL} ${SSHORT[STAGES[si-1]]}</button>`:''}
+              ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${SSHORT[STAGES[si+1]]} ${ICONS.arrowR}</button>`:''}
+            </div>
+          </div>`;
         });
       }
       html+=`</div>`;
     });
     html+=`</div>`;
   } else {
-    html+=`<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Empresa</th><th>Etapa</th><th>Valor</th><th>Próximo contato</th><th>Histórico</th><th>Mover</th></tr></thead><tbody>`;
-    if(!vis.length){html+=`<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text3)"><div style="display:flex;flex-direction:column;align-items:center;gap:8px">${ICONS.empty}<span>Nenhum prospect encontrado</span></div></td></tr>`;}
-    else{vis.forEach(p=>{
-      const si=STAGES.indexOf(p.stage);
-      const ds=dateStatus(p.proximoContato);
-      const dl=dateLabel(p.proximoContato);
-      const hl=(p.historico||[]).length;
-      html+=`<tr onclick="openEdit('${p.id}')"><td><div style="display:flex;align-items:center;gap:9px"><div class="card-avatar ${avColor(p.id)}" style="width:28px;height:28px;font-size:11px;border-radius:7px">${esc(initials(p.nome))}</div><span class="td-name">${esc(p.nome)}</span></div></td><td class="td-company">${esc(p.empresa)||'—'}</td><td><span class="badge ${SBADGE[p.stage]}">${p.stage}</span></td><td style="font-weight:500">${fmt(p.valor)}</td><td>${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span style="color:var(--text3);font-size:12px">—</span>`}</td><td class="td-hist">${hl?`${hl} registro${hl>1?'s':''}`:'—'}</td><td onclick="event.stopPropagation()"><div class="move-btns" style="margin-top:0">${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">${ICONS.arrowL}</button>`:''} ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${ICONS.arrowR}</button>`:''}</div></td></tr>`;
-    });}
+    html+=`<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Nome</th><th>Empresa</th><th>Etapa</th><th>Valor</th><th>Próximo contato</th><th>Histórico</th><th>Mover</th>
+      </tr></thead><tbody>`;
+    if(!vis.length){
+      html+=`<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text3)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${ICONS.empty}<span>Nenhum prospect encontrado</span></div>
+      </td></tr>`;
+    } else {
+      vis.forEach(p=>{
+        const si=STAGES.indexOf(p.stage);
+        const ds=dateStatus(p.proximoContato);
+        const dl=dateLabel(p.proximoContato);
+        const hl=(p.historico||[]).length;
+        html+=`<tr onclick="openEdit('${p.id}')">
+          <td><div style="display:flex;align-items:center;gap:9px">
+            <div class="card-avatar ${avColor(p.id)}" style="width:30px;height:30px;font-size:11px;border-radius:8px">${esc(initials(p.nome))}</div>
+            <span class="td-name">${esc(p.nome)}</span>
+          </div></td>
+          <td class="td-company">${esc(p.empresa)||'—'}</td>
+          <td><span class="badge ${SBADGE[p.stage]}">${p.stage}</span></td>
+          <td style="font-weight:500">${fmt(p.valor)}</td>
+          <td>${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span style="color:var(--text3);font-size:12px">—</span>`}</td>
+          <td class="td-hist">${hl?`${hl} registro${hl>1?'s':''}`:'—'}</td>
+          <td onclick="event.stopPropagation()">
+            <div class="move-btns" style="margin-top:0">
+              ${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">${ICONS.arrowL}</button>`:''}
+              ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${ICONS.arrowR}</button>`:''}
+            </div>
+          </td>
+        </tr>`;
+      });
+    }
     html+=`</tbody></table></div>`;
   }
   area.innerHTML=html;
 }
 
+function renderModal(){
+  let ov=document.getElementById('modal-overlay');
+  if(!modal){if(ov)ov.remove();return}
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='modal-overlay';
+    ov.className='overlay';
+    ov.addEventListener('click',closeModal);
+    document.body.appendChild(ov);
+  }
+  const hl=(modal.historico||[]).length;
+  let mhtml=`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h2>${editId?esc(modal.nome)||'Editar prospect':'Novo prospect'}</h2>
+        <button class="btn ghost" style="padding:6px" onclick="closeModal()">${ICONS.close}</button>
+      </div>
+      <div class="tabs">
+        <div class="tab${modalTab==='dados'?' active':''}" onclick="setTab('dados')">Dados</div>
+        <div class="tab${modalTab==='hist'?' active':''}" onclick="setTab('hist')">Histórico${hl?` (${hl})`:''}</div>
+      </div>
+    </div>
+    <div class="modal-body">`;
+
+  if(modalTab==='dados'){
+    mhtml+=`
+      <div class="modal-row">
+        <div class="field"><label>Nome *</label><input value="${esc(modal.nome)}" oninput="setField('nome',this.value)" placeholder="Nome do responsável"></div>
+        <div class="field"><label>Empresa</label><input value="${esc(modal.empresa)}" oninput="setField('empresa',this.value)" placeholder="Razão social"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>Cargo</label><input value="${esc(modal.contato)}" oninput="setField('contato',this.value)" placeholder="Cargo ou função"></div>
+        <div class="field"><label>Telefone</label><input value="${esc(modal.telefone)}" oninput="setField('telefone',this.value)" placeholder="(xx) xxxxx-xxxx"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>E-mail</label><input value="${esc(modal.email)}" oninput="setField('email',this.value)" placeholder="email@empresa.com"></div>
+        <div class="field"><label>Valor estimado (R$)</label><input type="number" value="${esc(modal.valor)}" oninput="setField('valor',this.value)" placeholder="0"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>Etapa</label><select oninput="setField('stage',this.value)">${STAGES.map(s=>`<option value="${s}"${modal.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Próximo contato</label><input type="date" value="${esc(modal.proximoContato)}" oninput="setField('proximoContato',this.value)"></div>
+      </div>
+      <div class="field"><label>Notas</label><textarea oninput="setField('notas',this.value)" placeholder="Observações, próximos passos...">${esc(modal.notas)}</textarea></div>`;
+  } else {
+    const hist=modal.historico||[];
+    mhtml+=`<div class="hist-list">`;
+    if(!hist.length)mhtml+=`<div class="empty">${ICONS.empty}<span>Nenhuma interação registrada</span></div>`;
+    hist.forEach(h=>{
+      mhtml+=`<div class="hist-item">
+        <div class="hist-meta">
+          <span class="htag ${TIPO_CLS[h.tipo]||'ht-nota'}">${h.tipo}</span>
+          <span class="hist-date">${fmtDateFull(h.data)||h.data}</span>
+          <button class="hist-del" onclick="delHist('${h.id}')">remover</button>
+        </div>
+        <div class="hist-texto">${esc(h.texto)}</div>
+      </div>`;
+    });
+    mhtml+=`</div>
+    <div class="hist-add">
+      <textarea placeholder="Descreva a interação..." oninput="newHistTxt=this.value">${esc(newHistTxt)}</textarea>
+      <div class="hist-add-row">
+        <select onchange="newHistTipo=this.value">${TIPOS.map(t=>`<option value="${t}"${newHistTipo===t?' selected':''}>${t}</option>`).join('')}</select>
+        <button class="btn primary" onclick="addHist()">${ICONS.plus} Registrar</button>
+      </div>
+    </div>`;
+  }
+
+  mhtml+=`</div>
+    <div class="modal-footer">
+      ${editId?`<button class="btn del-btn" onclick="deleteProspect()">${ICONS.trash} Excluir</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveModal()">Salvar</button>
+    </div>
+  </div>`;
+  ov.innerHTML=mhtml;
+}
+
+function render(){renderFull()}
 render();
 </script>
 </body>
