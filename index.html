@@ -230,6 +230,8 @@ tbody tr:hover td{background:var(--surface2)}
 .ht-reuniao{background:var(--purple-bg);color:var(--purple)}
 .ht-nota{background:var(--surface2);color:var(--text2)}
 
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* Empty states */
 .empty{display:flex;flex-direction:column;align-items:center;padding:3rem;color:var(--text3)}
 .empty svg{width:36px;height:36px;margin-bottom:12px;opacity:0.3}
@@ -253,10 +255,39 @@ const TIPOS=['Nota','Ligação','E-mail','Reunião'];
 const TIPO_CLS={'Ligação':'ht-ligacao','E-mail':'ht-email','Reunião':'ht-reuniao','Nota':'ht-nota'};
 const AV_COLORS=['av-blue','av-amber','av-green','av-purple','av-red'];
 
-function load(){try{return JSON.parse(localStorage.getItem('crm_v2')||'[]')}catch{return[]}}
-function save(d){localStorage.setItem('crm_v2',JSON.stringify(d))}
+// Supabase config
+const SB_URL='https://bubdoqvlsodiidhcarey.supabase.co';
+const SB_KEY='sb_publishable_4p4W83oDOtlSNRJUj16TFA_Ptve7SPv';
+const SB_API=`${SB_URL}/rest/v1/prospects`;
+const SB_HDR={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
 
-let prospects=load(),view='kanban',modal=null,editId=null,modalTab='dados';
+async function dbFetch(){
+  try{
+    const r=await fetch(`${SB_API}?select=*`,{headers:SB_HDR});
+    if(!r.ok)throw new Error(await r.text());
+    const data=await r.json();
+    const rows=data.map(p=>({...p,historico:Array.isArray(p.historico)?p.historico:[]}));
+    localStorage.setItem('crm_v2',JSON.stringify(rows));
+    return rows;
+  }catch(e){
+    console.warn('Supabase offline, usando cache local:',e.message);
+    try{return JSON.parse(localStorage.getItem('crm_v2')||'[]')}catch{return[]}
+  }
+}
+async function dbUpsert(prospect){
+  const r=await fetch(SB_API,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({...prospect,valor:prospect.valor===''||prospect.valor===null?null:Number(prospect.valor)||null})});
+  if(!r.ok)throw new Error(await r.text());
+}
+async function dbPatch(id,data){
+  const r=await fetch(`${SB_API}?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error(await r.text());
+}
+async function dbDelete(id){
+  const r=await fetch(`${SB_API}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:SB_HDR});
+  if(!r.ok)throw new Error(await r.text());
+}
+
+let prospects=[],view='kanban',modal=null,editId=null,modalTab='dados';
 let newHistTxt='',newHistTipo='Nota',filterSearch='',filterStage='';
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -273,9 +304,42 @@ function avColor(id){const h=id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);ret
 function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:'Lead',notas:'',proximoContato:'',historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
 function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';renderModal()}
 function closeModal(){modal=null;editId=null;const ov=document.getElementById('modal-overlay');if(ov)ov.remove()}
-function saveModal(){if(!modal.nome.trim()){alert('Nome é obrigatório');return}if(editId){prospects=prospects.map(p=>p.id===editId?{...modal,id:editId}:p)}else{prospects=[...prospects,{...modal,id:uid(),criadoEm:today()}]}save(prospects);closeModal();renderFull()}
-function deleteProspect(){if(!editId)return;if(!confirm('Excluir este prospect?'))return;prospects=prospects.filter(p=>p.id!==editId);save(prospects);closeModal();renderFull()}
-function moveStage(id,dir,e){if(e)e.stopPropagation();prospects=prospects.map(p=>{if(p.id!==id)return p;const i=STAGES.indexOf(p.stage);const ni=i+dir;if(ni<0||ni>=STAGES.length)return p;return{...p,stage:STAGES[ni]}});save(prospects);renderContent()}
+async function saveModal(){
+  if(!modal.nome.trim()){alert('Nome é obrigatório');return}
+  const record={...modal,id:editId||uid(),criadoEm:modal.criadoEm||today()};
+  try{
+    await dbUpsert(record);
+    if(editId){prospects=prospects.map(p=>p.id===editId?record:p)}else{prospects=[...prospects,record]}
+    localStorage.setItem('crm_v2',JSON.stringify(prospects));
+    closeModal();renderFull();
+  }catch(e){alert('Erro ao salvar: '+e.message)}
+}
+async function deleteProspect(){
+  if(!editId)return;
+  if(!confirm('Excluir este prospect?'))return;
+  try{
+    await dbDelete(editId);
+    prospects=prospects.filter(p=>p.id!==editId);
+    localStorage.setItem('crm_v2',JSON.stringify(prospects));
+    closeModal();renderFull();
+  }catch(e){alert('Erro ao excluir: '+e.message)}
+}
+async function moveStage(id,dir,e){
+  if(e)e.stopPropagation();
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const i=STAGES.indexOf(p.stage);const ni=i+dir;
+  if(ni<0||ni>=STAGES.length)return;
+  const newStage=STAGES[ni];
+  prospects=prospects.map(x=>x.id===id?{...x,stage:newStage}:x);
+  renderContent();
+  try{
+    await dbPatch(id,{stage:newStage});
+    localStorage.setItem('crm_v2',JSON.stringify(prospects));
+  }catch(e){
+    prospects=prospects.map(x=>x.id===id?{...x,stage:STAGES[i]}:x);
+    renderContent();alert('Erro ao mover: '+e.message);
+  }
+}
 function setField(k,v){modal={...modal,[k]:v}}
 function setView(v){view=v;renderTopbar();renderContent()}
 function setTab(t){modalTab=t;renderModal()}
@@ -575,7 +639,12 @@ function renderModal(){
   ov.innerHTML=mhtml;
 }
 
-function render(){renderFull()}
+async function init(){
+  document.getElementById('app').innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:40vh;gap:10px;color:var(--text3);font-size:14px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Carregando dados...</div>`;
+  prospects=await dbFetch();
+  renderFull();
+}
+function render(){init()}
 render();
 </script>
 </body>
