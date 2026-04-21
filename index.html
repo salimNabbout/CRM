@@ -873,7 +873,8 @@ const ICONS={
   calendar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
   user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   settings:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-  file:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`
+  file:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+  chart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>`
 };
 
 function toast(msg,type='success'){
@@ -918,6 +919,7 @@ function renderSidebar(){
   const items=[
     {id:'pipeline',label:'Pipeline',icon:ICONS.layers,color:'#2563EB'},
     {id:'dashboard',label:'Dashboard',icon:ICONS.trending,color:'#16A34A'},
+    {id:'analytics',label:'Análise',icon:ICONS.chart||ICONS.trending,color:'#EC4899'},
     {id:'agenda',label:'Agenda',icon:ICONS.calendar,color:'#7C3AED'},
     {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#F97316'}
   ];
@@ -950,7 +952,7 @@ function setPage(p){
 function renderTopbar(){
   const all=prospects;
   const page=window.currentPage||'pipeline';
-  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospecto${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},agenda:{t:'Agenda',s:'Compromissos e próximos contatos'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
+  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospecto${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},analytics:{t:'Análise',s:'Atividade diária e histórico mensal'},agenda:{t:'Agenda',s:'Compromissos e próximos contatos'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
   const cur=titles[page]||titles.pipeline;
   document.getElementById('topbar').innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;min-width:0">
@@ -976,6 +978,7 @@ function renderFull(){
   const page=window.currentPage||'pipeline';
   const app=document.getElementById('app');
   if(page==='dashboard'){renderDashboard();return}
+  if(page==='analytics'){renderAnalytics();return}
   if(page==='agenda'){renderAgenda();return}
   if(page==='settings'){renderSettings();return}
   const all=prospects;
@@ -1037,6 +1040,156 @@ function renderFull(){
   renderContent();
 }
 
+let analyticsDate=new Date(),analyticsCharts=[];
+function allEvents(){
+  const evs=[];
+  prospects.forEach(p=>{(p.historico||[]).forEach(h=>{if(h.data)evs.push({...h,pid:p.id,pname:p.nome,pempresa:p.empresa,pstage:p.stage})})});
+  return evs;
+}
+function monthKey(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`}
+function monthLabel(d){return `${MESES_ABREV[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`}
+const MESES_ABREV=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function renderAnalytics(){
+  const app=document.getElementById('app');
+  const d=analyticsDate,y=d.getFullYear(),m=d.getMonth();
+  const mKey=monthKey(d);
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const allEvts=allEvents();
+  const monthEvts=allEvts.filter(e=>e.data&&e.data.startsWith(mKey));
+
+  // KPIs mês atual
+  const newLeadsMonth=monthEvts.filter(e=>e.tipo==='Criação').length;
+  const movsMonth=monthEvts.filter(e=>e.tipo==='Movimentação').length;
+  const interMonth=monthEvts.filter(e=>['Nota','Ligação','E-mail','Reunião'].includes(e.tipo)).length;
+  const lastStage=STAGES[STAGES.length-1];
+  const convMonth=monthEvts.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.endsWith(`→ ${lastStage}`)).length;
+
+  // Comparação mês anterior
+  const prevD=new Date(y,m-1,1);
+  const prevKey=monthKey(prevD);
+  const prevEvts=allEvts.filter(e=>e.data&&e.data.startsWith(prevKey));
+  const prevLeads=prevEvts.filter(e=>e.tipo==='Criação').length;
+  const prevMovs=prevEvts.filter(e=>e.tipo==='Movimentação').length;
+  const prevInter=prevEvts.filter(e=>['Nota','Ligação','E-mail','Reunião'].includes(e.tipo)).length;
+  const prevConv=prevEvts.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.endsWith(`→ ${lastStage}`)).length;
+  const pct=(cur,prev)=>prev===0?(cur>0?'+∞':'—'):`${cur>=prev?'+':''}${Math.round((cur-prev)/prev*100)}%`;
+  const pctColor=(cur,prev)=>cur>prev?'var(--green)':(cur<prev?'var(--red)':'var(--text3)');
+
+  // Série diária do mês
+  const dailyLeads=new Array(daysInMonth).fill(0);
+  const dailyMovs=new Array(daysInMonth).fill(0);
+  const dailyInter=new Array(daysInMonth).fill(0);
+  monthEvts.forEach(e=>{
+    const day=parseInt(e.data.split('-')[2])-1;
+    if(day<0||day>=daysInMonth)return;
+    if(e.tipo==='Criação')dailyLeads[day]++;
+    else if(e.tipo==='Movimentação')dailyMovs[day]++;
+    else dailyInter[day]++;
+  });
+
+  // Últimos 6 meses
+  const months6=[];
+  for(let i=5;i>=0;i--){
+    const md=new Date(y,m-i,1);
+    const mk=monthKey(md);
+    const me=allEvts.filter(e=>e.data&&e.data.startsWith(mk));
+    months6.push({
+      label:monthLabel(md),
+      leads:me.filter(e=>e.tipo==='Criação').length,
+      movs:me.filter(e=>e.tipo==='Movimentação').length,
+      inter:me.filter(e=>['Nota','Ligação','E-mail','Reunião'].includes(e.tipo)).length,
+      conv:me.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.endsWith(`→ ${lastStage}`)).length
+    });
+  }
+
+  const monthName=`${MESES[m].charAt(0).toUpperCase()+MESES[m].slice(1)} ${y}`;
+  const isDark=document.documentElement.classList.contains('dark');
+  const grid=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+  const tick=isDark?'#9C968F':'#78716C';
+
+  app.innerHTML=`
+    <div class="agenda-toolbar">
+      <div class="agenda-nav">
+        <button class="btn ghost nav-arrow" onclick="analyticsNav(-1)" title="Anterior">‹</button>
+        <button class="btn" onclick="analyticsToday()">Atual</button>
+        <button class="btn ghost nav-arrow" onclick="analyticsNav(1)" title="Próximo">›</button>
+        <span class="agenda-title">${monthName}</span>
+      </div>
+      <button class="btn ghost" onclick="exportAnalyticsCSV()" style="--btn-ic:#16A34A">${ICONS.download} Exportar mês</button>
+    </div>
+    <div class="metrics">
+      <div class="metric m-total"><div class="metric-accent"></div><div class="metric-icon mi-total" style="background:rgba(227,6,19,0.1);color:var(--accent)">${ICONS.plus}</div><div class="metric-label">Novos Leads</div><div class="metric-value">${newLeadsMonth}</div><div class="metric-sub" style="color:${pctColor(newLeadsMonth,prevLeads)}">${pct(newLeadsMonth,prevLeads)} vs mês anterior</div></div>
+      <div class="metric m-stages"><div class="metric-accent"></div><div class="metric-icon mi-stages">${ICONS.layers}</div><div class="metric-label">Movimentações</div><div class="metric-value">${movsMonth}</div><div class="metric-sub" style="color:${pctColor(movsMonth,prevMovs)}">${pct(movsMonth,prevMovs)} vs mês anterior</div></div>
+      <div class="metric m-today"><div class="metric-accent"></div><div class="metric-icon mi-today">${ICONS.clock}</div><div class="metric-label">Interações</div><div class="metric-value">${interMonth}</div><div class="metric-sub" style="color:${pctColor(interMonth,prevInter)}">${pct(interMonth,prevInter)} vs mês anterior</div></div>
+      <div class="metric m-pipeline"><div class="metric-accent"></div><div class="metric-icon mi-pipeline">${ICONS.trending}</div><div class="metric-label">Conversões</div><div class="metric-value">${convMonth}</div><div class="metric-sub" style="color:${pctColor(convMonth,prevConv)}">chegaram em "${lastStage}"</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Atividade diária — ${monthName}</div>
+        <div class="chart-card-sub">Novos leads, movimentações e interações por dia</div>
+        <div class="chart-canvas-wrap" style="height:300px"><canvas id="chart-daily"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Tendência — últimos 6 meses</div>
+        <div class="chart-card-sub">Evolução mês a mês</div>
+        <div class="chart-canvas-wrap" style="height:300px"><canvas id="chart-trend"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-top:14px">
+      <div class="chart-card-title">Comparativo mensal</div>
+      <div class="chart-card-sub">Totais consolidados — base para decisões estratégicas</div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2)">Mês</th>
+              <th style="text-align:right;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent)">Novos Leads</th>
+              <th style="text-align:right;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--blue)">Movimentações</th>
+              <th style="text-align:right;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--amber)">Interações</th>
+              <th style="text-align:right;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--green)">Conversões</th>
+              <th style="text-align:right;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2)">Taxa Conv.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${months6.map(mm=>{
+              const rate=mm.leads?Math.round(mm.conv/mm.leads*100):0;
+              return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px;font-weight:600;text-transform:capitalize">${mm.label}</td><td style="padding:10px 12px;text-align:right">${mm.leads}</td><td style="padding:10px 12px;text-align:right">${mm.movs}</td><td style="padding:10px 12px;text-align:right">${mm.inter}</td><td style="padding:10px 12px;text-align:right">${mm.conv}</td><td style="padding:10px 12px;text-align:right;font-weight:600;color:${rate>=30?'var(--green)':(rate>=10?'var(--amber)':'var(--red)')}">${rate}%</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  analyticsCharts.forEach(c=>{try{c.destroy()}catch{}});analyticsCharts=[];
+  if(typeof Chart==='undefined')return;
+  setTimeout(()=>{
+    const labels=Array.from({length:daysInMonth},(_,i)=>pad2(i+1));
+    const c1=document.getElementById('chart-daily');
+    if(c1)analyticsCharts.push(new Chart(c1,{type:'bar',data:{labels,datasets:[
+      {label:'Novos Leads',data:dailyLeads,backgroundColor:'#E30613',borderRadius:4,stack:'a'},
+      {label:'Movimentações',data:dailyMovs,backgroundColor:'#2563EB',borderRadius:4,stack:'a'},
+      {label:'Interações',data:dailyInter,backgroundColor:'#D97706',borderRadius:4,stack:'a'}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tick,font:{size:11},boxWidth:10}},tooltip:{backgroundColor:'#1A1917',padding:10,cornerRadius:8}},scales:{x:{stacked:true,grid:{display:false},ticks:{color:tick,font:{size:10}}},y:{stacked:true,grid:{color:grid},ticks:{color:tick,font:{size:11},precision:0}}}}}));
+    const c2=document.getElementById('chart-trend');
+    if(c2)analyticsCharts.push(new Chart(c2,{type:'line',data:{labels:months6.map(x=>x.label),datasets:[
+      {label:'Novos Leads',data:months6.map(x=>x.leads),borderColor:'#E30613',backgroundColor:'rgba(227,6,19,0.1)',tension:0.3,fill:true,borderWidth:2},
+      {label:'Movimentações',data:months6.map(x=>x.movs),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,0.1)',tension:0.3,borderWidth:2},
+      {label:'Conversões',data:months6.map(x=>x.conv),borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,0.1)',tension:0.3,borderWidth:2}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tick,font:{size:11},boxWidth:10}},tooltip:{backgroundColor:'#1A1917',padding:10,cornerRadius:8}},scales:{x:{grid:{display:false},ticks:{color:tick,font:{size:11}}},y:{grid:{color:grid},ticks:{color:tick,font:{size:11},precision:0},beginAtZero:true}}}}));
+  },30);
+}
+function analyticsNav(dir){analyticsDate.setMonth(analyticsDate.getMonth()+dir);renderAnalytics()}
+function analyticsToday(){analyticsDate=new Date();renderAnalytics()}
+function exportAnalyticsCSV(){
+  const d=analyticsDate,y=d.getFullYear(),m=d.getMonth(),mKey=monthKey(d);
+  const evts=allEvents().filter(e=>e.data&&e.data.startsWith(mKey)).sort((a,b)=>(a.data+(a.hora||'')).localeCompare(b.data+(b.hora||'')));
+  const cols=['Data','Hora','Tipo','Prospecto','Empresa','Descrição','Usuário'];
+  const rows=evts.map(e=>[e.data,e.hora||'',e.tipo,e.pname,e.pempresa||'',e.texto||'',e.user||'']);
+  const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`atividade-${mKey}.csv`;a.click();
+  toast(`CSV de ${monthLabel(d)} exportado`);
+}
 let agendaView='month',agendaDate=new Date();
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
