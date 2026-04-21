@@ -703,8 +703,8 @@ async function sendTemplate(tplId){
     let subject='',body=text;
     const mt=text.match(/^Assunto:\s*([^\n]+)\n+([\s\S]*)$/);
     if(mt){subject=mt[1].trim();body=mt[2].trim()}
-    const params=new URLSearchParams({path:'/mail/action/compose',to:modal.email,subject,body});
-    const link=`https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+    const enc=s=>encodeURIComponent(s).replace(/%20/g,'%20');
+    const link=`https://outlook.office.com/mail/deeplink/compose?path=%2Fmail%2Faction%2Fcompose&to=${enc(modal.email)}&subject=${enc(subject)}&body=${enc(body)}`;
     window.open(link,'_blank','noopener');
     await logInteracao('E-mail','Enviou e-mail: '+tpl.nome);
   } else if(tpl.tipo==='LinkedIn'){
@@ -955,18 +955,19 @@ function openOutlookEvent(){
   if(p.valor)bodyParts.push(`Valor estimado: R$ ${Number(p.valor).toLocaleString('pt-BR')}`);
   if(p.notas)bodyParts.push('','Notas:',p.notas);
   const body=bodyParts.join('\n');
-  const params=new URLSearchParams({
-    path:'/calendar/action/compose',
-    rru:'addevent',
-    subject,
-    body,
-    startdt:startISO,
-    enddt:endISO,
-    location:p.empresa||'',
-    allday:'false'
-  });
-  if(p.email)params.append('to',p.email);
-  const url=`https://outlook.office.com/calendar/0/deeplink/compose?${params.toString()}`;
+  const enc=s=>encodeURIComponent(String(s||''));
+  const parts=[
+    'path=%2Fcalendar%2Faction%2Fcompose',
+    'rru=addevent',
+    `subject=${enc(subject)}`,
+    `body=${enc(body)}`,
+    `startdt=${enc(startISO)}`,
+    `enddt=${enc(endISO)}`,
+    `location=${enc(p.empresa||'')}`,
+    'allday=false'
+  ];
+  if(p.email)parts.push(`to=${enc(p.email)}`);
+  const url=`https://outlook.office.com/calendar/0/deeplink/compose?${parts.join('&')}`;
   window.open(url,'_blank','noopener');
 }
 function exportPDF(){
