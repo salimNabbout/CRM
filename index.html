@@ -659,6 +659,46 @@ let goalsConfig={
   leads_week:10,conv_week:2,inter_week:25,
   leads_month:20,conv_month:5,inter_month:50
 };
+const DEFAULT_CADENCIA=[
+  {dia:0,tipo:'E-mail',acao:'Enviar e-mail de abordagem inicial'},
+  {dia:3,tipo:'WhatsApp',acao:'Follow-up WhatsApp mencionando o e-mail'},
+  {dia:7,tipo:'Ligação',acao:'Ligar para tentar contato direto'},
+  {dia:10,tipo:'LinkedIn',acao:'Enviar convite de conexão no LinkedIn'},
+  {dia:15,tipo:'E-mail',acao:'E-mail de "breakup" — última tentativa'}
+];
+let cadenciaConfig=[...DEFAULT_CADENCIA];
+async function loadCadenciaConfig(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.cadencia&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();if(Array.isArray(data[0]?.value)&&data[0].value.length)cadenciaConfig=data[0].value}
+  }catch{}
+}
+async function saveCadenciaConfig(){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:'cadencia',value:cadenciaConfig,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
+function nextCadenceStep(p){
+  if(!p||p.desqualificado||p.stage===LAST_STAGE())return null;
+  const criado=p.criadoEm||today();
+  const d1=new Date(criado);
+  const today_d=new Date();today_d.setHours(0,0,0,0);
+  const daysSince=Math.floor((today_d-d1)/86400000);
+  const hist=(p.historico||[]).filter(h=>['Ligação','E-mail','Reunião','Nota'].includes(h.tipo));
+  const countByType={};
+  hist.forEach(h=>{countByType[h.tipo]=(countByType[h.tipo]||0)+1});
+  // Encontra próximo passo ainda não executado
+  for(const step of cadenciaConfig){
+    const tipoMatch=step.tipo==='WhatsApp'?'Ligação':(step.tipo==='LinkedIn'?'Nota':step.tipo);
+    const stepsBefore=cadenciaConfig.filter(s=>s.dia<=step.dia&&s.tipo===step.tipo).length;
+    const executed=(countByType[tipoMatch]||0);
+    if(executed<stepsBefore)return {...step,daysSinceStart:daysSince,daysUntil:step.dia-daysSince};
+  }
+  return null;
+}
 function weekStartYmd(){
   const d=new Date();
   const day=d.getDay();
@@ -2047,6 +2087,28 @@ function renderSettings(){
     </div>
 
     <div class="settings-card" style="margin-top:18px">
+      <h3>Régua de Cadência</h3>
+      <div class="h-sub">Sequência automática sugerida de contatos. A "próxima ação" aparece no modal do prospecto e nas sugestões do Dashboard.</div>
+      ${cadenciaConfig.map((c,i)=>`
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface)">
+          <div style="background:var(--accent);color:#fff;padding:6px 10px;border-radius:var(--radius);font-size:12px;font-weight:700;min-width:44px;text-align:center">D+<input type="number" value="${c.dia}" onchange="cadenciaConfig[${i}].dia=Number(this.value)||0" style="width:30px;background:transparent;border:none;color:#fff;font-weight:700;text-align:center;font-size:12px"></div>
+          <select onchange="cadenciaConfig[${i}].tipo=this.value" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12.5px;background:transparent;color:var(--text);min-width:120px">
+            ${['E-mail','WhatsApp','Ligação','LinkedIn','Reunião','Nota'].map(t=>`<option value="${t}"${c.tipo===t?' selected':''}>${t}</option>`).join('')}
+          </select>
+          <input type="text" value="${esc(c.acao)}" onchange="cadenciaConfig[${i}].acao=this.value" placeholder="Descrição da ação" style="flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12.5px;background:transparent;color:var(--text)">
+          <button onclick="removeCadencia(${i})" style="padding:6px 9px;background:transparent;border:1px solid var(--red-mid);color:var(--red);border-radius:var(--radius);cursor:pointer" title="Remover passo">${ICONS.trash}</button>
+        </div>
+      `).join('')}
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:10px">
+        <button class="btn" onclick="addCadencia()">${ICONS.plus} Adicionar passo</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="resetCadencia()">Restaurar padrão</button>
+          <button class="btn primary" onclick="commitCadencia()">Salvar cadência</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:18px">
       <h3>Assinatura de E-mail</h3>
       <div class="h-sub">Usada em todos os templates de e-mail. Variável <code>{{seuNome}}</code> preenche com quem está logado.</div>
       <div class="field"><label>Texto da assinatura</label>
@@ -2149,6 +2211,21 @@ async function commitTemplates(){
 }
 async function commitSignature(){
   try{await saveSignatureConfig();toast('Assinatura salva')}catch(e){toast('Erro ao salvar assinatura: '+e.message,'error')}
+}
+function addCadencia(){
+  const last=cadenciaConfig[cadenciaConfig.length-1];
+  cadenciaConfig.push({dia:(last?last.dia:0)+3,tipo:'E-mail',acao:'Nova ação de follow-up'});
+  renderSettings();
+}
+function removeCadencia(i){cadenciaConfig.splice(i,1);renderSettings()}
+function resetCadencia(){
+  if(!confirm('Restaurar cadência padrão?'))return;
+  cadenciaConfig=JSON.parse(JSON.stringify(DEFAULT_CADENCIA));renderSettings();
+}
+async function commitCadencia(){
+  // Ordena por dia antes de salvar
+  cadenciaConfig.sort((a,b)=>a.dia-b.dia);
+  try{await saveCadenciaConfig();toast('Cadência salva');renderSettings()}catch(e){toast('Erro ao salvar cadência: '+e.message,'error')}
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
 function stageFieldTyping(i,field,val){editStages[i][field]=val;settingsDirty=true}
@@ -2477,6 +2554,11 @@ function renderModal(){
           ${origensConfig.map(o=>`<option value="${esc(o)}"${modal.origem===o?' selected':''}>${esc(o)}</option>`).join('')}
         </select>
       </div>
+      ${editId?(()=>{const nc=nextCadenceStep(modal);if(!nc)return '';const status=nc.daysUntil<0?'atrasado':(nc.daysUntil===0?'hoje':`em ${nc.daysUntil} dias`);const color=nc.daysUntil<0?'var(--red)':(nc.daysUntil<=1?'var(--amber)':'var(--blue)');return `<div class="field" style="padding:12px;background:${nc.daysUntil<0?'var(--red-bg)':'var(--blue-bg)'};border:1px solid ${nc.daysUntil<0?'var(--red-mid)':'var(--blue-mid)'};border-radius:var(--radius);margin-bottom:14px">
+        <label style="margin-bottom:4px;display:block;color:${color};text-transform:uppercase;font-size:10.5px">⚡ Próxima ação sugerida · ${status}</label>
+        <div style="font-size:13px;color:var(--text);font-weight:500"><b>${esc(nc.tipo)}</b> — ${esc(nc.acao)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Régua D+${nc.dia} · ${nc.daysSinceStart} ${nc.daysSinceStart===1?'dia':'dias'} desde a criação</div>
+      </div>`})():''}
       <div class="field" style="padding:14px;border:1px dashed var(--border2);border-radius:var(--radius)">
         <label style="margin-bottom:10px;display:block">Qualificação BANT <span style="text-transform:none;color:var(--text3);font-weight:400;font-size:10.5px;letter-spacing:0">marque o que se confirma</span></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">
@@ -2553,6 +2635,7 @@ async function init(){
   await loadMotivosConfig();
   await loadTemplatesConfig();
   await loadSignatureConfig();
+  await loadCadenciaConfig();
   await loadGoalsConfig();
   prospects=await dbFetch();
   renderFull();
