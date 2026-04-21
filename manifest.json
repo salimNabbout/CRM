@@ -1,0 +1,16 @@
+{
+  "name": "CRM CETEM Automação",
+  "short_name": "CRM CETEM",
+  "description": "CRM de Prospecção - CETEM Automação",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E30613",
+  "theme_color": "#E30613",
+  "icons": [
+    {"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
