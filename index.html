@@ -898,7 +898,7 @@ function renderSidebar(){
     {id:'pipeline',label:'Pipeline',icon:ICONS.layers,color:'#2563EB'},
     {id:'dashboard',label:'Dashboard',icon:ICONS.trending,color:'#16A34A'},
     {id:'agenda',label:'Agenda',icon:ICONS.calendar,color:'#7C3AED'},
-    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#78716C'}
+    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#F97316'}
   ];
   nav.innerHTML=`<div class="s-section">Navegação</div>`+
     items.map(it=>`<button class="nav-item${(window.currentPage||'pipeline')===it.id?' active':''}" onclick="setPage('${it.id}')" style="--ic:${it.color}">${it.icon}<span>${it.label}</span></button>`).join('');
@@ -941,8 +941,8 @@ function renderTopbar(){
     </div>
     <div class="topbar-actions">
       ${page==='pipeline'?`<div class="view-toggle">
-        <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">${ICONS.grid} Kanban</button>
-        <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button>
+        <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')" style="--btn-ic:#0EA5E9">${ICONS.grid} Kanban</button>
+        <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')" style="--btn-ic:#14B8A6">${ICONS.list} Lista</button>
       </div>
       <div style="display:flex;gap:2px"><button class="btn ghost" onclick="exportPDF()" title="Exportar PDF" style="--btn-ic:#DC2626">${ICONS.file} PDF</button><button class="btn ghost" onclick="exportCSV()" title="Exportar CSV" style="--btn-ic:#16A34A">${ICONS.download} CSV</button></div>
       <button class="btn primary" onclick="openNew()">${ICONS.plus} Nova Prospecção</button>`:''}
