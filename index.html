@@ -1151,6 +1151,10 @@ function computeStageVelocity(){
       const parts2=(to.texto||'').split('→').map(s=>s.trim());
       const toStage=parts2[1]||parts2[0];
       if(!fromStage||!toStage||fromStage===toStage)continue;
+      // Só considera transições progressivas (para frente no funil)
+      const fromIdx=STAGES.indexOf(fromStage);
+      const toIdx=STAGES.indexOf(toStage);
+      if(fromIdx<0||toIdx<0||toIdx<=fromIdx)continue;
       const d1=new Date(from.data+'T'+(from.hora||'00:00'));
       const d2=new Date(to.data+'T'+(to.hora||'00:00'));
       const days=(d2-d1)/86400000;
@@ -1160,7 +1164,11 @@ function computeStageVelocity(){
       transitions[key].push(days);
     }
   });
-  return Object.entries(transitions).map(([k,arr])=>({key:k,avg:arr.reduce((a,b)=>a+b,0)/arr.length,count:arr.length})).sort((a,b)=>b.count-a.count);
+  // Ordenar por sequência natural do funil
+  return Object.entries(transitions).map(([k,arr])=>{
+    const fromStage=k.split('→')[0].trim();
+    return {key:k,avg:arr.reduce((a,b)=>a+b,0)/arr.length,count:arr.length,order:STAGES.indexOf(fromStage)};
+  }).sort((a,b)=>a.order-b.order);
 }
 function computeHeatmap(mKey){
   const grid=Array.from({length:7},()=>new Array(24).fill(0));
