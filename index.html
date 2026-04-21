@@ -595,6 +595,25 @@ const DEFAULT_TEMPLATES=[
   {id:'tpl-sc-1',nome:'Script — Cold call inicial',tipo:'Script ligação',texto:'Olá {{nome}}, boa tarde! Aqui é {{seuNome}} da CETEM Automação. Espero não estar ligando em momento inoportuno.\n\nDirigindo ao assunto: trabalhamos com automação industrial, Data Science e IA para chão de fábrica. Já apoiamos empresas como [citar cases] a reduzir paradas não programadas.\n\nPor isso estou entrando em contato com a {{empresa}}. Queria entender se este tema está no radar de vocês e, em caso positivo, propor uma apresentação de 15 minutos.\n\nO que acha?\n\n[Se NÃO: Sem problema. Posso anotar para retomar contato daqui a 3 meses?]\n[Se SIM: Ótimo! Que tal {{dia próxima semana}}?]'}
 ];
 let templatesConfig=[...DEFAULT_TEMPLATES];
+const DEFAULT_SIGNATURE={
+  texto:'Atenciosamente,\n\n{{seuNome}}\nCETEM Automação\nAutomação Industrial · Data Science · IA\ncetemrj.com.br',
+  autoAppend:true
+};
+let signatureConfig={...DEFAULT_SIGNATURE};
+async function loadSignatureConfig(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.signature&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();if(data[0]?.value)signatureConfig={...DEFAULT_SIGNATURE,...data[0].value}}
+  }catch{}
+}
+async function saveSignatureConfig(){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:'signature',value:signatureConfig,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
 async function loadTemplatesConfig(){
   try{
     const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.templates&select=value`,{headers:sbHdr()});
@@ -611,7 +630,8 @@ async function saveTemplatesConfig(){
 }
 function fillTemplate(txt,p){
   const seuNome=(currentUser()||'').split('@')[0];
-  return String(txt||'').replace(/\{\{nome\}\}/g,p.nome||'').replace(/\{\{empresa\}\}/g,p.empresa||'').replace(/\{\{cargo\}\}/g,p.contato||'').replace(/\{\{telefone\}\}/g,p.telefone||'').replace(/\{\{email\}\}/g,p.email||'').replace(/\{\{seuNome\}\}/g,seuNome);
+  const sig=String(signatureConfig.texto||'').replace(/\{\{seuNome\}\}/g,seuNome);
+  return String(txt||'').replace(/\{\{assinatura\}\}/g,sig).replace(/\{\{nome\}\}/g,p.nome||'').replace(/\{\{empresa\}\}/g,p.empresa||'').replace(/\{\{cargo\}\}/g,p.contato||'').replace(/\{\{telefone\}\}/g,p.telefone||'').replace(/\{\{email\}\}/g,p.email||'').replace(/\{\{seuNome\}\}/g,seuNome);
 }
 function waLink(phone,text){
   const digits=String(phone||'').replace(/\D/g,'');
@@ -747,6 +767,12 @@ async function sendTemplate(tplId){
     let subject='',body=text;
     const mt=text.match(/^Assunto:\s*([^\n]+)\n+([\s\S]*)$/);
     if(mt){subject=mt[1].trim();body=mt[2].trim()}
+    // Auto-append da assinatura se template não contiver {{assinatura}} e auto estiver ligado
+    if(signatureConfig.autoAppend&&!tpl.texto.includes('{{assinatura}}')){
+      const seuNome=(currentUser()||'').split('@')[0];
+      const sig=String(signatureConfig.texto||'').replace(/\{\{seuNome\}\}/g,seuNome);
+      if(sig.trim())body=body+'\n\n'+sig;
+    }
     // Copia assunto + corpo formatados para o clipboard (fallback se Outlook não formatar certo)
     try{await navigator.clipboard.writeText(`Assunto: ${subject}\n\n${body}`)}catch{}
     // Abre Outlook Web com dados pré-preenchidos (to/subject funciona, body pode vir com + em algumas versões)
@@ -1864,6 +1890,28 @@ function renderSettings(){
     </div>
 
     <div class="settings-card" style="margin-top:18px">
+      <h3>Assinatura de E-mail</h3>
+      <div class="h-sub">Usada em todos os templates de e-mail. Variável <code>{{seuNome}}</code> preenche com quem está logado.</div>
+      <div class="field"><label>Texto da assinatura</label>
+        <textarea oninput="signatureConfig.texto=this.value" style="width:100%;min-height:120px;padding:11px 13px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:transparent;color:var(--text);resize:vertical">${esc(signatureConfig.texto||'')}</textarea>
+      </div>
+      <div class="field" style="margin-bottom:6px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px">
+          <input type="checkbox" ${signatureConfig.autoAppend?'checked':''} onchange="signatureConfig.autoAppend=this.checked" style="width:16px;height:16px;cursor:pointer">
+          Adicionar automaticamente no final de cada e-mail
+        </label>
+      </div>
+      <div style="background:var(--surface2);padding:11px 13px;border-radius:var(--radius);font-size:12px;color:var(--text2);margin-top:6px">
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px">💡 Como usar</div>
+        • Com <b>auto ligado</b>: a assinatura é adicionada no final de todo e-mail, exceto se o template já usa <code>{{assinatura}}</code><br>
+        • Com <b>auto desligado</b>: use a variável <code>{{assinatura}}</code> no template onde você quiser que ela apareça
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="btn primary" onclick="commitSignature()">Salvar assinatura</button>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:18px">
       <h3>Metas de Prospecção</h3>
       <div class="h-sub">Acompanhadas no Dashboard (diária · semanal) e na Análise (mensal)</div>
 
@@ -1941,6 +1989,9 @@ function resetTemplates(){
 }
 async function commitTemplates(){
   try{await saveTemplatesConfig();toast('Templates salvos')}catch(e){toast('Erro ao salvar templates: '+e.message,'error')}
+}
+async function commitSignature(){
+  try{await saveSignatureConfig();toast('Assinatura salva')}catch(e){toast('Erro ao salvar assinatura: '+e.message,'error')}
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
 function stageFieldTyping(i,field,val){editStages[i][field]=val;settingsDirty=true}
@@ -2329,6 +2380,7 @@ async function init(){
   await loadOrigensConfig();
   await loadMotivosConfig();
   await loadTemplatesConfig();
+  await loadSignatureConfig();
   await loadGoalsConfig();
   prospects=await dbFetch();
   renderFull();
