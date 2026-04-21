@@ -66,7 +66,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .brand-icon{height:46px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-icon img{height:46px;width:auto;display:block;object-fit:contain}
 .brand-icon svg{width:42px;height:42px;display:block}
-html.dark .brand-icon img{background:#fff;border-radius:6px;padding:3px 6px}
 .brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:800;color:var(--brand-black);letter-spacing:-0.3px;text-transform:uppercase}
 .brand-text .b-red{color:var(--accent)}
 .brand-sub{font-size:11px;color:var(--text3);font-weight:500;margin-top:2px;letter-spacing:0.3px}
@@ -317,7 +316,6 @@ body{display:block}
 #sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:90;overflow-y:auto}
 .s-logo{padding:18px 20px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:center;align-items:center;min-height:74px}
 .s-logo img{max-width:170px;height:auto;display:block}
-html.dark .s-logo img{background:#fff;border-radius:6px;padding:6px 10px}
 .s-nav{flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:3px}
 .s-section{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:14px 12px 6px}
 .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:500;color:var(--text2);cursor:pointer;transition:all 0.15s;border:none;background:transparent;text-align:left;font-family:inherit;width:100%;line-height:1}
@@ -360,7 +358,7 @@ html.dark .s-logo img{background:#fff;border-radius:6px;padding:6px 10px}
 <div id="login-screen" style="display:none">
   <div class="login-card">
     <div class="login-brand">
-      <img src="logo-cetem.jpg" alt="CETEM Automação" style="max-width:220px;height:auto;display:block">
+      <img src="logo-cetem.png" alt="CETEM Automação" style="max-width:220px;height:auto;display:block">
     </div>
     <div class="login-title">CRM Prospecção</div>
     <div class="login-sub">Entre com seu e-mail e senha</div>
@@ -376,7 +374,7 @@ html.dark .s-logo img{background:#fff;border-radius:6px;padding:6px 10px}
 <div id="app-shell" style="display:none">
   <div id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
   <aside id="sidebar">
-    <div class="s-logo"><img src="logo-cetem.jpg" alt="CETEM Automação"></div>
+    <div class="s-logo"><img src="logo-cetem.png" alt="CETEM Automação"></div>
     <nav class="s-nav" id="sidebar-nav"></nav>
     <div class="s-footer" id="sidebar-footer"></div>
   </aside>
