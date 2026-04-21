@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
 .stage-handle:active{cursor:grabbing}
 .stage-color{width:36px;height:36px;border-radius:9px;flex-shrink:0;cursor:pointer;border:2px solid var(--border);position:relative;overflow:hidden}
 .stage-color input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.stage-row input[type="text"]{padding:8px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);transition:border-color 0.15s}
+.stage-row input[type="text"]{padding:8px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:transparent;color:var(--text);transition:border-color 0.15s}
 .stage-row input[type="text"]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
 .stage-row .s-name{flex:2;min-width:120px}
 .stage-row .s-short{flex:1;min-width:80px}
@@ -989,15 +989,15 @@ function renderSettings(){
         <button class="btn" onclick="addStage()">${ICONS.plus} Adicionar etapa</button>
         <div style="display:flex;gap:8px">
           <button class="btn" onclick="resetStages()">Restaurar padrão</button>
-          <button class="btn" onclick="discardStageChanges()" ${settingsDirty?'':'disabled style="opacity:0.5"'}>Descartar</button>
-          <button class="btn primary" onclick="commitStageChanges()" ${settingsDirty?'':'disabled style="opacity:0.5"'}>Salvar alterações</button>
+          <button class="btn" onclick="discardStageChanges()">Descartar</button>
+          <button class="btn primary" onclick="commitStageChanges()">Salvar alterações</button>
         </div>
       </div>
-      ${settingsDirty?`<div style="margin-top:12px;padding:10px 12px;background:var(--amber-bg);border:1px solid var(--amber-mid);border-radius:var(--radius);color:var(--amber);font-size:12px">Mudanças não salvas — clique em <b>Salvar alterações</b> para aplicar a todos.</div>`:''}
+      <div style="margin-top:12px;padding:10px 12px;background:var(--amber-bg);border:1px solid var(--amber-mid);border-radius:var(--radius);color:var(--amber);font-size:12px;${settingsDirty?'':'display:none'}">Mudanças não salvas — clique em <b>Salvar alterações</b> para aplicar a todos.</div>
     </div>`;
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
-function stageFieldTyping(i,field,val){editStages[i][field]=val;if(!settingsDirty){settingsDirty=true;const b=document.querySelector('.settings-actions .btn.primary');if(b){b.disabled=false;b.removeAttribute('style')}const d=document.querySelectorAll('.settings-actions button')[1];if(d){d.disabled=false;d.removeAttribute('style')}}}
+function stageFieldTyping(i,field,val){editStages[i][field]=val;settingsDirty=true}
 function addStage(){
   const palette=['#0EA5E9','#F97316','#10B981','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1'];
   const color=palette[editStages.length%palette.length];
