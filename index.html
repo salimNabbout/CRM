@@ -568,6 +568,50 @@ async function saveStagesConfig(){
 }
 const DEFAULT_ORIGENS=['LinkedIn','Indicação','Cold Email','Cold Call','Site','Evento','WhatsApp','Outro'];
 const DEFAULT_MOTIVOS=['Sem orçamento','Sem fit técnico','Cliente de concorrente','Contato errado (não é decisor)','Timing errado','Sem interesse','Não respondeu após cadência','Outro'];
+const DEFAULT_SETORES=['Indústria','Metalurgia','Alimentos & Bebidas','Química & Petroquímica','Farmacêutico','Papel & Celulose','Automotivo','Mineração','Energia','Saneamento','Logística','Comércio','Serviços','Outro'];
+const DEFAULT_PORTES=[
+  {label:'Micro (até 9 funcionários)',pts:0},
+  {label:'Pequeno (10-49)',pts:5},
+  {label:'Médio (50-499)',pts:15},
+  {label:'Grande (500+)',pts:20}
+];
+let setoresConfig=[...DEFAULT_SETORES];
+let icpConfig={
+  setoresPrioritarios:['Indústria','Metalurgia','Alimentos & Bebidas','Química & Petroquímica'],
+  portesPrioritarios:['Médio (50-499)','Grande (500+)']
+};
+async function loadIcpConfig(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.icp&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();if(data[0]?.value)icpConfig={...icpConfig,...data[0].value}}
+    const r2=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.setores&select=value`,{headers:sbHdr()});
+    if(r2.ok){const data=await r2.json();if(Array.isArray(data[0]?.value)&&data[0].value.length)setoresConfig=data[0].value}
+  }catch{}
+}
+async function saveIcpConfig(){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:'icp',value:icpConfig,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
+function icpScore(p){
+  if(!p)return 0;
+  let score=0;
+  if(p.setor&&icpConfig.setoresPrioritarios.includes(p.setor))score+=40;
+  else if(p.setor)score+=15;
+  if(p.porte){
+    const port=DEFAULT_PORTES.find(pt=>pt.label===p.porte);
+    if(port)score+=port.pts;
+    if(icpConfig.portesPrioritarios.includes(p.porte))score+=20;
+  }
+  // bonus se tem decisor identificado
+  if(p.contato)score+=10;
+  // bonus se tem email corporativo
+  if(p.email&&!p.email.match(/@(gmail|hotmail|yahoo|outlook|live|bol|uol|terra)\./i))score+=10;
+  return Math.min(100,score);
+}
 let motivosConfig=[...DEFAULT_MOTIVOS];
 async function loadMotivosConfig(){
   try{
@@ -958,7 +1002,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function initials(nome){const p=(nome||'').trim().split(' ');return(p[0]?.[0]||'')+(p[1]?.[0]||'').toUpperCase()||'?'}
 function avColor(id){const h=id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);return AV_COLORS[h%AV_COLORS.length]}
 
-function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:STAGES[0]||'Lead',notas:'',proximoContato:'',horaContato:'',origem:'',desqualificado:false,motivoDesqualificacao:'',bantB:false,bantA:false,bantN:false,bantT:false,historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
+function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:STAGES[0]||'Lead',notas:'',proximoContato:'',horaContato:'',origem:'',setor:'',porte:'',desqualificado:false,motivoDesqualificacao:'',bantB:false,bantA:false,bantN:false,bantT:false,historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
 function bantScore(p){if(!p)return 0;let s=0;if(p.bantB)s+=25;if(p.bantA)s+=25;if(p.bantN)s+=25;if(p.bantT)s+=25;return s}
 function scoreStatus(s){
   if(s>=75)return{label:'Qualificado',color:'#16A34A',bg:'rgba(22,163,74,0.12)'};
@@ -2125,6 +2169,28 @@ function renderSettings(){
     </div>
 
     <div class="settings-card" style="margin-top:18px">
+      <h3>ICP — Perfil de Cliente Ideal</h3>
+      <div class="h-sub">Define setores e portes que você quer priorizar. Quanto mais aderente, maior o ICP Fit do prospecto.</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin:14px 0 6px">Setores prioritários</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        ${setoresConfig.map(s=>{const active=icpConfig.setoresPrioritarios.includes(s);return `<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;background:${active?'var(--blue-bg)':'var(--surface2)'};border:1px solid ${active?'var(--blue)':'var(--border)'};border-radius:99px;cursor:pointer;font-size:12px;color:${active?'var(--blue)':'var(--text)'}">
+          <input type="checkbox" ${active?'checked':''} onchange="toggleSetorPrioritario('${esc(s)}')" style="width:12px;height:12px;cursor:pointer;margin:0">
+          ${esc(s)}
+        </label>`}).join('')}
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin:14px 0 6px">Portes prioritários</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        ${DEFAULT_PORTES.map(pt=>{const active=icpConfig.portesPrioritarios.includes(pt.label);return `<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;background:${active?'var(--blue-bg)':'var(--surface2)'};border:1px solid ${active?'var(--blue)':'var(--border)'};border-radius:99px;cursor:pointer;font-size:12px;color:${active?'var(--blue)':'var(--text)'}">
+          <input type="checkbox" ${active?'checked':''} onchange="togglePortePrioritario('${esc(pt.label)}')" style="width:12px;height:12px;cursor:pointer;margin:0">
+          ${esc(pt.label)}
+        </label>`}).join('')}
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn primary" onclick="commitIcp()">Salvar ICP</button>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:18px">
       <h3>Régua de Cadência</h3>
       <div class="h-sub">Sequência automática sugerida de contatos. A "próxima ação" aparece no modal do prospecto e nas sugestões do Dashboard.</div>
       ${cadenciaConfig.map((c,i)=>`
@@ -2261,9 +2327,23 @@ function resetCadencia(){
   cadenciaConfig=JSON.parse(JSON.stringify(DEFAULT_CADENCIA));renderSettings();
 }
 async function commitCadencia(){
-  // Ordena por dia antes de salvar
   cadenciaConfig.sort((a,b)=>a.dia-b.dia);
   try{await saveCadenciaConfig();toast('Cadência salva');renderSettings()}catch(e){toast('Erro ao salvar cadência: '+e.message,'error')}
+}
+function toggleSetorPrioritario(s){
+  const idx=icpConfig.setoresPrioritarios.indexOf(s);
+  if(idx>=0)icpConfig.setoresPrioritarios.splice(idx,1);
+  else icpConfig.setoresPrioritarios.push(s);
+  renderSettings();
+}
+function togglePortePrioritario(p){
+  const idx=icpConfig.portesPrioritarios.indexOf(p);
+  if(idx>=0)icpConfig.portesPrioritarios.splice(idx,1);
+  else icpConfig.portesPrioritarios.push(p);
+  renderSettings();
+}
+async function commitIcp(){
+  try{await saveIcpConfig();toast('ICP salvo')}catch(e){toast('Erro ao salvar ICP: '+e.message,'error')}
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
 function stageFieldTyping(i,field,val){editStages[i][field]=val;settingsDirty=true}
@@ -2606,11 +2686,34 @@ function renderModal(){
           </div>
         </div>
       </div>
-      <div class="field"><label>Origem do Lead</label>
-        <select oninput="setField('origem',this.value)">
-          <option value="">— Selecione —</option>
-          ${origensConfig.map(o=>`<option value="${esc(o)}"${modal.origem===o?' selected':''}>${esc(o)}</option>`).join('')}
-        </select>
+      <div class="modal-row">
+        <div class="field"><label>Origem do Lead</label>
+          <select oninput="setField('origem',this.value)">
+            <option value="">— Selecione —</option>
+            ${origensConfig.map(o=>`<option value="${esc(o)}"${modal.origem===o?' selected':''}>${esc(o)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Setor</label>
+          <select oninput="setField('setor',this.value);renderModal()">
+            <option value="">— Selecione —</option>
+            ${setoresConfig.map(s=>`<option value="${esc(s)}"${modal.setor===s?' selected':''}>${esc(s)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>Porte da empresa</label>
+          <select oninput="setField('porte',this.value);renderModal()">
+            <option value="">— Selecione —</option>
+            ${DEFAULT_PORTES.map(pt=>`<option value="${esc(pt.label)}"${modal.porte===pt.label?' selected':''}>${esc(pt.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>ICP Fit (fit ao perfil ideal)</label>
+          ${(()=>{const s=icpScore(modal);const color=s>=70?'var(--green)':(s>=40?'var(--amber)':'var(--red)');return `<div style="padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);display:flex;align-items:center;gap:10px;background:var(--bg)">
+            <div style="flex:1;height:8px;background:var(--surface2);border-radius:99px;overflow:hidden"><div style="height:100%;width:${s}%;background:${color};border-radius:99px"></div></div>
+            <div style="font-size:13px;font-weight:700;color:${color};min-width:50px;text-align:right">${s}/100</div>
+          </div>`})()}
+        </div>
       </div>
       ${editId?(()=>{const nc=nextCadenceStep(modal);if(!nc)return '';const status=nc.daysUntil<0?'atrasado':(nc.daysUntil===0?'hoje':`em ${nc.daysUntil} dias`);const color=nc.daysUntil<0?'var(--red)':(nc.daysUntil<=1?'var(--amber)':'var(--blue)');return `<div class="field" style="padding:12px;background:${nc.daysUntil<0?'var(--red-bg)':'var(--blue-bg)'};border:1px solid ${nc.daysUntil<0?'var(--red-mid)':'var(--blue-mid)'};border-radius:var(--radius);margin-bottom:14px">
         <label style="margin-bottom:4px;display:block;color:${color};text-transform:uppercase;font-size:10.5px">⚡ Próxima ação sugerida · ${status}</label>
@@ -2691,6 +2794,7 @@ async function init(){
   await loadStagesConfig();
   await loadOrigensConfig();
   await loadMotivosConfig();
+  await loadIcpConfig();
   await loadTemplatesConfig();
   await loadSignatureConfig();
   await loadCadenciaConfig();
