@@ -153,7 +153,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .col-count{font-size:11px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:2px 9px;color:var(--text2)}
 
 /* Cards */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow)}
+.card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--card-c,var(--border));border-radius:var(--radius-lg);padding:14px 14px 14px 12px;margin-bottom:10px;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow)}
 .card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .card:active{transform:translateY(0);box-shadow:var(--shadow)}
 .card:last-child{margin-bottom:0}
@@ -1144,7 +1144,7 @@ function renderContent(){
           const dl=dateLabel(p.proximoContato);
           const av=avColor(p.id);
           const hl=(p.historico||[]).length;
-          html+=`<div class="card" data-card-id="${p.id}" draggable="true" ondragstart="dragStart(event,'${p.id}')" ondragend="dragEnd(event)" onclick="openEdit('${p.id}')">
+          html+=`<div class="card" data-card-id="${p.id}" draggable="true" style="--card-c:${stageColor(p.stage)}" ondragstart="dragStart(event,'${p.id}')" ondragend="dragEnd(event)" onclick="openEdit('${p.id}')">
             <div class="card-header">
               <div class="card-avatar ${av}">${esc(initials(p.nome))}</div>
               <div class="card-info">
