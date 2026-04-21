@@ -1063,6 +1063,124 @@ function openOutlookEvent(){
   const url=`https://outlook.office.com/calendar/0/deeplink/compose?${parts.join('&')}`;
   window.open(url,'_blank','noopener');
 }
+function generateBriefing(){
+  if(!window.jspdf){toast('Biblioteca PDF não carregada','error');return}
+  if(!modal){return}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+  const p=modal;
+  const score=bantScore(p);
+  const st=scoreStatus(score);
+  let y=0;
+  doc.setFillColor(227,6,19);doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('CETEM AUTOMAÇÃO',14,12);
+  doc.setFontSize(16);doc.text('BRIEFING DE PROSPECÇÃO',14,21);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
+  doc.text(`Gerado ${new Date().toLocaleString('pt-BR')} por ${currentUser().split('@')[0]}`,W-14,22,{align:'right'});
+  y=36;
+  doc.setTextColor(26,25,23);doc.setFont('helvetica','bold');doc.setFontSize(20);
+  doc.text(p.nome||'—',14,y);y+=7;
+  doc.setFont('helvetica','normal');doc.setFontSize(12);doc.setTextColor(110,104,98);
+  doc.text(p.empresa||'—',14,y);y+=10;
+  doc.setDrawColor(220,215,208);doc.setLineWidth(0.3);doc.line(14,y,W-14,y);y+=6;
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(120,113,108);
+  doc.text('DADOS DE CONTATO',14,y);y+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(26,25,23);
+  const infoLines=[];
+  if(p.contato)infoLines.push(['Cargo:',p.contato]);
+  if(p.email)infoLines.push(['E-mail:',p.email]);
+  if(p.telefone)infoLines.push(['Telefone:',p.telefone]);
+  if(p.origem)infoLines.push(['Origem do lead:',p.origem]);
+  if(p.valor)infoLines.push(['Valor estimado:','R$ '+Number(p.valor).toLocaleString('pt-BR')]);
+  if(p.proximoContato)infoLines.push(['Próximo contato:',fmtDateFull(p.proximoContato)+(p.horaContato?' às '+p.horaContato:'')]);
+  infoLines.push(['Etapa atual:',p.stage||'—']);
+  infoLines.forEach(([k,v])=>{
+    doc.setTextColor(120,113,108);doc.text(k,14,y);
+    doc.setTextColor(26,25,23);doc.text(String(v),45,y);y+=5.5;
+  });
+  y+=3;
+  doc.setDrawColor(220,215,208);doc.line(14,y,W-14,y);y+=6;
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(120,113,108);
+  doc.text('QUALIFICAÇÃO BANT',14,y);y+=5;
+  const barW=W-28,barY=y,barH=6;
+  doc.setFillColor(240,237,230);doc.rect(14,barY,barW,barH,'F');
+  const [r,g,b]=st.color==='#16A34A'?[22,163,74]:(st.color==='#D97706'?[217,119,6]:(st.color==='#DC2626'?[220,38,38]:[120,113,108]));
+  doc.setFillColor(r,g,b);doc.rect(14,barY,barW*score/100,barH,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(r,g,b);
+  doc.text(`${score}/100`,14,barY+barH+6);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);
+  doc.text(`· ${st.label}`,28,barY+barH+6);
+  y=barY+barH+11;
+  const bant=[{k:'bantB',l:'Budget',d:'Orçamento disponível'},{k:'bantA',l:'Authority',d:'É o decisor'},{k:'bantN',l:'Need',d:'Tem necessidade'},{k:'bantT',l:'Timing',d:'É o momento certo'}];
+  bant.forEach(b=>{
+    const ok=!!p[b.k];
+    if(ok){doc.setTextColor(22,163,74);doc.text('✓',14,y)}
+    else{doc.setTextColor(200,195,188);doc.text('○',14,y)}
+    doc.setFont('helvetica','bold');doc.setTextColor(26,25,23);doc.text(b.l,20,y);
+    doc.setFont('helvetica','normal');doc.setTextColor(110,104,98);doc.text('— '+b.d,38,y);
+    y+=5.5;
+  });
+  y+=3;
+  if(p.notas&&p.notas.trim()){
+    doc.setDrawColor(220,215,208);doc.line(14,y,W-14,y);y+=6;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(120,113,108);
+    doc.text('NOTAS / CONTEXTO',14,y);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(26,25,23);
+    const lines=doc.splitTextToSize(p.notas,W-28);
+    lines.forEach(l=>{if(y>H-30){doc.addPage();y=20}doc.text(l,14,y);y+=5});
+    y+=3;
+  }
+  const hist=(p.historico||[]).slice().sort((a,b)=>(b.data+(b.hora||'')).localeCompare(a.data+(a.hora||'')));
+  if(hist.length){
+    if(y>H-50){doc.addPage();y=20}
+    doc.setDrawColor(220,215,208);doc.line(14,y,W-14,y);y+=6;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(120,113,108);
+    doc.text(`HISTÓRICO DE INTERAÇÕES (${hist.length})`,14,y);y+=5;
+    hist.forEach(h=>{
+      if(y>H-16){doc.addPage();y=20}
+      const tagColor={'Movimentação':[227,6,19],'Criação':[22,163,74],'Ligação':[37,99,235],'E-mail':[22,163,74],'Reunião':[124,58,237],'Nota':[120,113,108]}[h.tipo]||[120,113,108];
+      doc.setFillColor(...tagColor);doc.roundedRect(14,y-3.5,22,5,1,1,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(255);
+      doc.text(String(h.tipo||'').toUpperCase().slice(0,10),25,y,{align:'center'});
+      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(110,104,98);
+      doc.text(`${fmtDateFull(h.data)||h.data}${h.hora?' · '+h.hora:''}${h.user?' · '+h.user.split('@')[0]:''}`,38,y);
+      y+=4.5;
+      doc.setFontSize(9.5);doc.setTextColor(26,25,23);
+      const lines=doc.splitTextToSize(h.texto||'',W-34);
+      lines.slice(0,4).forEach(l=>{if(y>H-12){doc.addPage();y=20}doc.text(l,19,y);y+=4.2});
+      y+=2.5;
+    });
+  }
+  if(y>H-40){doc.addPage();y=20}
+  y+=3;
+  doc.setFillColor(250,246,240);doc.roundedRect(14,y-1,W-28,32,2,2,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(227,6,19);
+  doc.text('SUGESTÃO DE ABORDAGEM',18,y+5);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(60,55,50);
+  const sugestoes=[];
+  if(score>=75)sugestoes.push('• Lead qualificado — foco em agendar apresentação técnica detalhada.');
+  else if(score>=50)sugestoes.push('• Lead parcial — verificar pontos fracos de BANT na conversa.');
+  else sugestoes.push('• Lead imaturo — priorizar descoberta antes de avançar.');
+  if(!p.bantB)sugestoes.push('• Investigar disponibilidade orçamentária.');
+  if(!p.bantA)sugestoes.push('• Identificar quem é o decisor e escalar.');
+  if(!p.bantN)sugestoes.push('• Aprofundar dores/necessidades da operação.');
+  if(!p.bantT)sugestoes.push('• Verificar timing do projeto e urgência.');
+  let sy=y+10;
+  sugestoes.slice(0,4).forEach(l=>{const sw=doc.splitTextToSize(l,W-40);sw.forEach(ll=>{doc.text(ll,18,sy);sy+=4.5})});
+  y=sy+4;
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    doc.setFontSize(7.5);doc.setTextColor(150);
+    doc.text('CETEM Automação · CRM de Prospecção · Documento interno',14,H-6);
+    doc.text(`Página ${i} de ${pages}`,W-14,H-6,{align:'right'});
+  }
+  const slug=(p.empresa||p.nome||'prospecto').replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40);
+  doc.save(`briefing-${slug}-${new Date().toISOString().slice(0,10)}.pdf`);
+  toast('Briefing PDF gerado');
+}
 function exportPDF(){
   if(!window.jspdf){toast('Biblioteca PDF não carregada','error');return}
   const {jsPDF}=window.jspdf;
@@ -2419,6 +2537,7 @@ function renderModal(){
         <button class="btn" onclick="openTemplatePicker('E-mail')" title="Enviar e-mail" style="--btn-ic:#EA4335;padding:7px 9px">${ICONS.mail}</button>
         <button class="btn" onclick="openTemplatePicker('LinkedIn')" title="Copiar mensagem LinkedIn" style="--btn-ic:#0A66C2;padding:7px 9px">${ICONS.linkedin}</button>
         ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Agendar no Outlook" style="--btn-ic:#0078D4;padding:7px 9px">${ICONS.calendar}</button>`:''}
+        <button class="btn" onclick="generateBriefing()" title="Gerar Briefing PDF para handoff" style="--btn-ic:#DC2626;padding:7px 9px">${ICONS.file}</button>
       </div>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveModal()">Salvar</button>
