@@ -255,6 +255,12 @@ tbody tr:hover td{background:var(--surface2)}
 .ht-email{background:var(--green-bg);color:var(--green)}
 .ht-reuniao{background:var(--purple-bg);color:var(--purple)}
 .ht-nota{background:var(--surface2);color:var(--text2)}
+.ht-move{background:rgba(227,6,19,0.1);color:var(--accent)}
+.ht-create{background:var(--green-bg);color:var(--green)}
+.ht-edit{background:var(--surface3);color:var(--text2)}
+.hist-item.hist-auto{background:transparent;border-style:dashed}
+.hist-item.hist-auto .hist-texto{font-size:12.5px;color:var(--text2)}
+.hist-user{font-size:10.5px;color:var(--text3);font-weight:500}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -463,7 +469,7 @@ function hex2rgba(hex,a){if(!hex||hex[0]!=='#')return`rgba(120,113,108,${a})`;co
 function badgeStyle(name){const c=stageColor(name);return`background:${hex2rgba(c,0.12)};color:${c}`}
 function dotStyle(name){return`background:${stageColor(name)}`}
 const TIPOS=['Nota','Ligação','E-mail','Reunião'];
-const TIPO_CLS={'Ligação':'ht-ligacao','E-mail':'ht-email','Reunião':'ht-reuniao','Nota':'ht-nota'};
+const TIPO_CLS={'Ligação':'ht-ligacao','E-mail':'ht-email','Reunião':'ht-reuniao','Nota':'ht-nota','Movimentação':'ht-move','Criação':'ht-create','Edição':'ht-edit'};
 const AV_COLORS=['av-blue','av-amber','av-green','av-purple','av-red'];
 
 // Supabase config
@@ -631,6 +637,16 @@ function closeModal(){modal=null;editId=null;const ov=document.getElementById('m
 async function saveModal(){
   if(!modal.nome.trim()){alert('Nome é obrigatório');return}
   const record={...modal,id:editId||uid(),criadoEm:modal.criadoEm||today()};
+  if(!editId){
+    const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Criação',texto:`Prospecto criado na etapa "${record.stage}"`,auto:true,user:currentUser()};
+    record.historico=[entry,...(record.historico||[])];
+  } else {
+    const prev=prospects.find(p=>p.id===editId);
+    if(prev&&prev.stage!==record.stage){
+      const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Movimentação',texto:`${prev.stage} → ${record.stage}`,auto:true,user:currentUser()};
+      record.historico=[entry,...(record.historico||[])];
+    }
+  }
   try{
     await dbUpsert(record);
     if(editId){prospects=prospects.map(p=>p.id===editId?record:p)}else{prospects=[...prospects,record]}
@@ -648,16 +664,21 @@ async function deleteProspect(){
     closeModal();renderFull();toast('Prospecto excluído');
   }catch(e){toast('Erro ao excluir: '+e.message,'error')}
 }
+function nowHHMM(){const d=new Date();return`${pad2(d.getHours())}:${pad2(d.getMinutes())}`}
+function currentUser(){return session?.user?.email||'Sistema'}
 async function moveToStage(id,newStage){
   const p=prospects.find(x=>x.id===id);if(!p||p.stage===newStage)return;
   const oldStage=p.stage;
-  prospects=prospects.map(x=>x.id===id?{...x,stage:newStage}:x);
+  const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Movimentação',texto:`${oldStage} → ${newStage}`,auto:true,user:currentUser()};
+  const newHist=[entry,...(p.historico||[])];
+  const updated={...p,stage:newStage,historico:newHist};
+  prospects=prospects.map(x=>x.id===id?updated:x);
   renderContent();
   try{
-    await dbPatch(id,{stage:newStage});
+    await dbPatch(id,{stage:newStage,historico:newHist});
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
   }catch(e){
-    prospects=prospects.map(x=>x.id===id?{...x,stage:oldStage}:x);
+    prospects=prospects.map(x=>x.id===id?p:x);
     renderContent();toast('Erro ao mover: '+e.message,'error');
   }
 }
@@ -1218,6 +1239,31 @@ function stageDrop(e,i){
   editStages.splice(i,0,item);
   settingsDirty=true;stageDragIdx=null;renderSettings();
 }
+function renderActivityFeed(limit){
+  limit=limit||15;
+  const all=[];
+  prospects.forEach(p=>{
+    (p.historico||[]).forEach(h=>{all.push({...h,pid:p.id,pname:p.nome,pempresa:p.empresa,stage:p.stage})});
+  });
+  all.sort((a,b)=>{
+    const ka=(a.data||'')+' '+(a.hora||'00:00');
+    const kb=(b.data||'')+' '+(b.hora||'00:00');
+    return kb.localeCompare(ka);
+  });
+  const items=all.slice(0,limit);
+  if(!items.length)return '<div class="empty" style="padding:2rem"><span>Nenhuma atividade registrada ainda</span></div>';
+  return items.map(h=>{
+    const userShort=h.user?h.user.split('@')[0]:'';
+    return `<div class="upcoming-row" onclick="openEdit('${h.pid}')">
+      <div class="upcoming-when" style="min-width:68px;font-size:10.5px">${fmtDate(h.data)||h.data}${h.hora?'<br>'+esc(h.hora):''}</div>
+      <div class="upcoming-info">
+        <div class="upcoming-name">${esc(h.pname)}${h.pempresa?` <span style="color:var(--text3);font-weight:400">· ${esc(h.pempresa)}</span>`:''}</div>
+        <div class="upcoming-empresa">${esc(h.texto)}${userShort?` — <i>${esc(userShort)}</i>`:''}</div>
+      </div>
+      <span class="htag ${TIPO_CLS[h.tipo]||'ht-nota'}">${esc(h.tipo)}</span>
+    </div>`;
+  }).join('');
+}
 let dashCharts=[];
 function renderDashboard(){
   const all=prospects;
@@ -1267,6 +1313,11 @@ function renderDashboard(){
           <span class="badge dyn" style="--c:${stageColor(p.stage)};--c-bg:${hex2rgba(stageColor(p.stage),0.12)}">${esc(p.stage)}</span>
         </div>`;
       }).join(''):'<div class="empty" style="padding:2rem"><span>Nenhum contato agendado nos próximos 14 dias</span></div>'}</div>
+    </div>
+    <div class="chart-card" style="margin-top:14px">
+      <div class="chart-card-title">Atividade Recente</div>
+      <div class="chart-card-sub">Últimas 15 movimentações, criações e interações</div>
+      <div style="margin-top:6px">${renderActivityFeed()}</div>
     </div>
   `;
 
@@ -1420,11 +1471,13 @@ function renderModal(){
     mhtml+=`<div class="hist-list">`;
     if(!hist.length)mhtml+=`<div class="empty">${ICONS.empty}<span>Nenhuma interação registrada</span></div>`;
     hist.forEach(h=>{
-      mhtml+=`<div class="hist-item">
+      const userShort=h.user?h.user.split('@')[0]:'';
+      mhtml+=`<div class="hist-item${h.auto?' hist-auto':''}">
         <div class="hist-meta">
-          <span class="htag ${TIPO_CLS[h.tipo]||'ht-nota'}">${h.tipo}</span>
-          <span class="hist-date">${fmtDateFull(h.data)||h.data}</span>
-          <button class="hist-del" onclick="delHist('${h.id}')">remover</button>
+          <span class="htag ${TIPO_CLS[h.tipo]||'ht-nota'}">${esc(h.tipo)}</span>
+          ${userShort?`<span class="hist-user">por ${esc(userShort)}</span>`:''}
+          <span class="hist-date">${fmtDateFull(h.data)||h.data}${h.hora?' · '+esc(h.hora):''}</span>
+          ${h.auto?'':`<button class="hist-del" onclick="delHist('${h.id}')">remover</button>`}
         </div>
         <div class="hist-texto">${esc(h.texto)}</div>
       </div>`;
