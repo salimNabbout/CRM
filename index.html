@@ -976,12 +976,12 @@ function renderSettings(){
              ondragover="event.preventDefault()" ondrop="stageDrop(event,${i})">
           <div class="stage-handle" title="Arraste para reordenar">⋮⋮</div>
           <label class="stage-color" style="background:${esc(s.color)}" title="Trocar cor"><input type="color" value="${esc(s.color)}" onchange="updateStageField(${i},'color',this.value)"></label>
-          <div style="flex:3;display:flex;flex-direction:column;gap:6px;min-width:200px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
             <div style="display:flex;gap:6px">
-              <input type="text" class="s-name" placeholder="Nome da etapa" value="${esc(s.name)}" oninput="updateStageField(${i},'name',this.value)" style="flex:2">
-              <input type="text" class="s-short" placeholder="Abrev." value="${esc(s.short)}" oninput="updateStageField(${i},'short',this.value)" maxlength="14" style="flex:1">
+              <input type="text" class="s-name" placeholder="Nome da etapa" value="${esc(s.name)}" oninput="stageFieldTyping(${i},'name',this.value)" onchange="updateStageField(${i},'name',this.value)" style="flex:2;min-width:0">
+              <input type="text" class="s-short" placeholder="Abrev." value="${esc(s.short)}" oninput="stageFieldTyping(${i},'short',this.value)" onchange="updateStageField(${i},'short',this.value)" maxlength="14" style="flex:1;min-width:0">
             </div>
-            <input type="text" placeholder="Descrição (aparece no tooltip da coluna)" value="${esc(s.desc||'')}" oninput="updateStageField(${i},'desc',this.value)" style="width:100%">
+            <input type="text" placeholder="Descrição (tooltip da coluna)" value="${esc(s.desc||'')}" oninput="stageFieldTyping(${i},'desc',this.value)" onchange="updateStageField(${i},'desc',this.value)" style="width:100%">
           </div>
           ${editStages.length>2?`<button class="s-del" onclick="removeStage(${i})" title="Remover etapa">${ICONS.trash}</button>`:''}
         </div>`).join('')}</div>
@@ -997,6 +997,7 @@ function renderSettings(){
     </div>`;
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
+function stageFieldTyping(i,field,val){editStages[i][field]=val;if(!settingsDirty){settingsDirty=true;const b=document.querySelector('.settings-actions .btn.primary');if(b){b.disabled=false;b.removeAttribute('style')}const d=document.querySelectorAll('.settings-actions button')[1];if(d){d.disabled=false;d.removeAttribute('style')}}}
 function addStage(){
   const palette=['#0EA5E9','#F97316','#10B981','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1'];
   const color=palette[editStages.length%palette.length];
