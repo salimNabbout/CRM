@@ -703,8 +703,9 @@ async function sendTemplate(tplId){
     let subject='',body=text;
     const mt=text.match(/^Assunto:\s*([^\n]+)\n+([\s\S]*)$/);
     if(mt){subject=mt[1].trim();body=mt[2].trim()}
-    const link=`mailto:${encodeURIComponent(modal.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href=link;
+    const params=new URLSearchParams({path:'/mail/action/compose',to:modal.email,subject,body});
+    const link=`https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+    window.open(link,'_blank','noopener');
     await logInteracao('E-mail','Enviou e-mail: '+tpl.nome);
   } else if(tpl.tipo==='LinkedIn'){
     try{await navigator.clipboard.writeText(text);toast('Mensagem copiada — cole no LinkedIn')}
