@@ -355,6 +355,41 @@ tbody tr:hover td{background:var(--surface2)}
   .cal-evt-time{display:none}
 }
 
+/* === V2: Analytics === */
+.goal-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border)}
+.goal-row:last-child{border-bottom:none}
+.goal-label{font-size:12.5px;font-weight:600;color:var(--text);min-width:130px;flex-shrink:0}
+.goal-bar-wrap{flex:1;height:12px;background:var(--surface2);border-radius:99px;overflow:hidden;position:relative}
+.goal-bar{height:100%;background:linear-gradient(90deg,var(--gc-a),var(--gc-b));border-radius:99px;transition:width 0.4s ease}
+.goal-bar.over{background:linear-gradient(90deg,#16A34A,#059669)}
+.goal-bar.low{background:linear-gradient(90deg,#F59E0B,#DC2626)}
+.goal-val{font-size:12px;font-weight:700;color:var(--text);min-width:110px;text-align:right;font-variant-numeric:tabular-nums}
+.goal-pct{font-size:11px;color:var(--text3);margin-left:6px}
+
+.heatmap{display:grid;grid-template-columns:auto repeat(24,1fr);gap:2px;font-size:10px;align-items:center}
+.heatmap .hm-h{color:var(--text3);text-align:center;font-weight:500;padding:2px 0}
+.heatmap .hm-d{color:var(--text3);padding-right:8px;text-align:right;font-weight:600}
+.heatmap .hm-cell{aspect-ratio:1;background:var(--surface2);border-radius:3px;transition:all 0.2s;cursor:default}
+.heatmap .hm-cell[data-v]:hover{outline:2px solid var(--text);outline-offset:1px}
+
+.arch-badge{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);color:var(--green);padding:5px 11px;border-radius:99px;font-size:11.5px;font-weight:600;margin-left:12px}
+.arch-badge svg{width:12px;height:12px}
+
+.user-row{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--border)}
+.user-row:last-child{border-bottom:none}
+.user-av{width:36px;height:36px;border-radius:50%;background:var(--c,var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;text-transform:uppercase;flex-shrink:0}
+.user-name{flex:1;font-size:13px;font-weight:600;color:var(--text)}
+.user-stats{display:flex;gap:16px;font-size:12px;color:var(--text2)}
+.user-stats b{color:var(--text);font-size:13px;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.user-stats{flex-wrap:wrap;gap:8px}}
+
+.dormant-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--amber-bg);border:1px solid var(--amber-mid);border-radius:var(--radius);margin-bottom:6px;cursor:pointer;transition:all 0.15s}
+.dormant-row:hover{background:color-mix(in srgb,var(--amber-bg) 70%,var(--amber) 15%)}
+.dormant-days{background:var(--amber);color:#fff;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;min-width:52px;text-align:center}
+.dormant-info{flex:1;min-width:0}
+.dormant-name{font-size:13px;font-weight:600;color:var(--text)}
+.dormant-meta{font-size:11.5px;color:var(--text2)}
+
 /* === V2: Dashboard === */
 .dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:1.25rem}
 @media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
@@ -530,6 +565,36 @@ async function saveStagesConfig(){
   });
   if(!r.ok)throw new Error(await r.text());
   localStorage.setItem('crm_stages_v1',JSON.stringify(stagesConfig));
+}
+let goalsConfig={leads_month:20,conv_month:5,inter_month:50};
+async function loadGoalsConfig(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.goals&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();if(data[0]&&data[0].value)goalsConfig={...goalsConfig,...data[0].value}}
+  }catch{}
+}
+async function saveGoalsConfig(){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:'goals',value:goalsConfig,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
+async function loadSnapshot(mKey){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.snapshot-${mKey}&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();return data[0]&&data[0].value||null}
+  }catch{}
+  return null;
+}
+async function saveSnapshot(mKey,payload){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:`snapshot-${mKey}`,value:payload,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
 }
 
 async function doLogin(ev){
@@ -1040,7 +1105,7 @@ function renderFull(){
   renderContent();
 }
 
-let analyticsDate=new Date(),analyticsCharts=[];
+let analyticsDate=new Date(),analyticsCharts=[],currentSnapshot=null;
 function allEvents(){
   const evs=[];
   prospects.forEach(p=>{(p.historico||[]).forEach(h=>{if(h.data)evs.push({...h,pid:p.id,pname:p.nome,pempresa:p.empresa,pstage:p.stage})})});
@@ -1049,11 +1114,85 @@ function allEvents(){
 function monthKey(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`}
 function monthLabel(d){return `${MESES_ABREV[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`}
 const MESES_ABREV=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-function renderAnalytics(){
+const LAST_STAGE=()=>STAGES[STAGES.length-1];
+function computeMonthTotals(mKey){
+  const evs=allEvents().filter(e=>e.data&&e.data.startsWith(mKey));
+  const last=LAST_STAGE();
+  return {
+    leads:evs.filter(e=>e.tipo==='Criação').length,
+    movs:evs.filter(e=>e.tipo==='Movimentação').length,
+    inter:evs.filter(e=>['Nota','Ligação','E-mail','Reunião'].includes(e.tipo)).length,
+    conv:evs.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.endsWith(`→ ${last}`)).length,
+    response:evs.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.startsWith(`${STAGES[0]} →`)).length
+  };
+}
+function computeByUser(mKey){
+  const evs=allEvents().filter(e=>e.data&&e.data.startsWith(mKey));
+  const last=LAST_STAGE();
+  const users={};
+  evs.forEach(e=>{
+    const u=e.user||'Sistema';
+    users[u]=users[u]||{leads:0,movs:0,inter:0,conv:0};
+    if(e.tipo==='Criação')users[u].leads++;
+    else if(e.tipo==='Movimentação'){users[u].movs++;if(e.texto&&e.texto.endsWith(`→ ${last}`))users[u].conv++}
+    else users[u].inter++;
+  });
+  return users;
+}
+function computeStageVelocity(){
+  const transitions={};
+  prospects.forEach(p=>{
+    const hist=(p.historico||[]).filter(h=>h.tipo==='Movimentação'||h.tipo==='Criação').slice().sort((a,b)=>(a.data+(a.hora||'00:00')).localeCompare(b.data+(b.hora||'00:00')));
+    for(let i=0;i<hist.length-1;i++){
+      const from=hist[i],to=hist[i+1];
+      let fromStage;
+      if(from.tipo==='Criação'){const mt=from.texto&&from.texto.match(/"([^"]+)"/);fromStage=mt?mt[1]:STAGES[0]}
+      else{const parts=(from.texto||'').split('→').map(s=>s.trim());fromStage=parts[1]||parts[0]}
+      const parts2=(to.texto||'').split('→').map(s=>s.trim());
+      const toStage=parts2[1]||parts2[0];
+      if(!fromStage||!toStage||fromStage===toStage)continue;
+      const d1=new Date(from.data+'T'+(from.hora||'00:00'));
+      const d2=new Date(to.data+'T'+(to.hora||'00:00'));
+      const days=(d2-d1)/86400000;
+      if(days<0)continue;
+      const key=`${fromStage} → ${toStage}`;
+      transitions[key]=transitions[key]||[];
+      transitions[key].push(days);
+    }
+  });
+  return Object.entries(transitions).map(([k,arr])=>({key:k,avg:arr.reduce((a,b)=>a+b,0)/arr.length,count:arr.length})).sort((a,b)=>b.count-a.count);
+}
+function computeHeatmap(mKey){
+  const grid=Array.from({length:7},()=>new Array(24).fill(0));
+  const evs=mKey?allEvents().filter(e=>e.data&&e.data.startsWith(mKey)):allEvents();
+  evs.forEach(e=>{
+    if(!e.data)return;
+    const d=parseYmd(e.data);
+    const day=d.getDay();
+    const hour=e.hora?parseInt(e.hora.split(':')[0]):9;
+    if(!isNaN(hour)&&hour>=0&&hour<24)grid[day][hour]++;
+  });
+  return grid;
+}
+function computeDormant(){
+  const now=new Date();
+  return prospects.map(p=>{
+    const hist=(p.historico||[]).slice().sort((a,b)=>(b.data+(b.hora||'')).localeCompare(a.data+(a.hora||'')));
+    if(!hist.length)return null;
+    const last=hist[0];
+    const lastDate=new Date(last.data+'T'+(last.hora||'00:00'));
+    const daysStuck=Math.floor((now-lastDate)/86400000);
+    if(daysStuck>=14&&p.stage!==LAST_STAGE())return {p,daysStuck};
+    return null;
+  }).filter(Boolean).sort((a,b)=>b.daysStuck-a.daysStuck);
+}
+async function renderAnalytics(){
   const app=document.getElementById('app');
   const d=analyticsDate,y=d.getFullYear(),m=d.getMonth();
   const mKey=monthKey(d);
   const daysInMonth=new Date(y,m+1,0).getDate();
+  app.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:30vh;color:var(--text3);gap:10px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Carregando análise...</div>`;
+  currentSnapshot=await loadSnapshot(mKey);
   const allEvts=allEvents();
   const monthEvts=allEvts.filter(e=>e.data&&e.data.startsWith(mKey));
 
@@ -1107,6 +1246,17 @@ function renderAnalytics(){
   const grid=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
   const tick=isDark?'#9C968F':'#78716C';
 
+  // Dados complementares
+  const byUser=computeByUser(mKey);
+  const users=Object.keys(byUser);
+  const velocity=computeStageVelocity();
+  const heatmap=computeHeatmap(mKey);
+  const heatmapMax=Math.max(1,...heatmap.flat());
+  const dormant=computeDormant();
+  const responseRate=newLeadsMonth?Math.round(monthEvts.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.startsWith(`${STAGES[0]} →`)).length/Math.max(1,newLeadsMonth)*100):0;
+  const userColors=['#E30613','#2563EB','#16A34A','#F59E0B','#7C3AED','#0EA5E9','#EC4899','#14B8A6'];
+  const archBadge=currentSnapshot?`<span class="arch-badge">${ICONS.file} Arquivado ${new Date(currentSnapshot.archivedAt).toLocaleDateString('pt-BR')}</span>`:'';
+
   app.innerHTML=`
     <div class="agenda-toolbar">
       <div class="agenda-nav">
@@ -1114,8 +1264,12 @@ function renderAnalytics(){
         <button class="btn" onclick="analyticsToday()">Atual</button>
         <button class="btn ghost nav-arrow" onclick="analyticsNav(1)" title="Próximo">›</button>
         <span class="agenda-title">${monthName}</span>
+        ${archBadge}
       </div>
-      <button class="btn ghost" onclick="exportAnalyticsCSV()" style="--btn-ic:#16A34A">${ICONS.download} Exportar mês</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" onclick="exportAnalyticsCSV()" style="--btn-ic:#16A34A">${ICONS.download} CSV</button>
+        <button class="btn" onclick="archiveMonth()" style="--btn-ic:#0EA5E9">${ICONS.file} ${currentSnapshot?'Re-arquivar':'Arquivar mês'}</button>
+      </div>
     </div>
     <div class="metrics">
       <div class="metric m-total"><div class="metric-accent"></div><div class="metric-icon mi-total" style="background:rgba(227,6,19,0.1);color:var(--accent)">${ICONS.plus}</div><div class="metric-label">Novos Leads</div><div class="metric-value">${newLeadsMonth}</div><div class="metric-sub" style="color:${pctColor(newLeadsMonth,prevLeads)}">${pct(newLeadsMonth,prevLeads)} vs mês anterior</div></div>
@@ -1135,6 +1289,88 @@ function renderAnalytics(){
         <div class="chart-canvas-wrap" style="height:300px"><canvas id="chart-trend"></canvas></div>
       </div>
     </div>
+    <div class="chart-card" style="margin-top:14px">
+      <div class="chart-card-title">Metas do mês</div>
+      <div class="chart-card-sub">Progresso atual vs. metas configuradas — edite em <b>Configurações</b></div>
+      <div style="margin-top:10px">
+        ${[
+          {k:'leads_month',label:'Novos Leads',cur:newLeadsMonth,ca:'#E30613',cb:'#FF6B7A'},
+          {k:'conv_month',label:'Conversões',cur:convMonth,ca:'#16A34A',cb:'#6EE7B7'},
+          {k:'inter_month',label:'Interações',cur:interMonth,ca:'#D97706',cb:'#FCD34D'}
+        ].map(g=>{
+          const goal=goalsConfig[g.k]||1;
+          const pct=Math.min(100,Math.round(g.cur/goal*100));
+          const over=g.cur>=goal;
+          const low=pct<50;
+          return `<div class="goal-row" style="--gc-a:${g.ca};--gc-b:${g.cb}">
+            <div class="goal-label">${g.label}</div>
+            <div class="goal-bar-wrap"><div class="goal-bar ${over?'over':(low?'low':'')}" style="width:${pct}%"></div></div>
+            <div class="goal-val">${g.cur} / ${goal}<span class="goal-pct">${pct}%</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${dormant.length?`<div class="chart-card" style="margin-top:14px">
+      <div class="chart-card-title" style="color:var(--amber)">⚠️ Prospectos dormentes</div>
+      <div class="chart-card-sub">Sem movimento há mais de 14 dias — considere retomar contato</div>
+      <div style="margin-top:10px">
+        ${dormant.slice(0,10).map(d=>`<div class="dormant-row" onclick="openEdit('${d.p.id}')">
+          <div class="dormant-days">${d.daysStuck}d</div>
+          <div class="dormant-info">
+            <div class="dormant-name">${esc(d.p.nome)}${d.p.empresa?` · ${esc(d.p.empresa)}`:''}</div>
+            <div class="dormant-meta">Etapa atual: <b>${esc(d.p.stage)}</b></div>
+          </div>
+          <span class="badge dyn" style="--c:${stageColor(d.p.stage)};--c-bg:${hex2rgba(stageColor(d.p.stage),0.12)}">${esc(d.p.stage)}</span>
+        </div>`).join('')}
+        ${dormant.length>10?`<div style="text-align:center;font-size:12px;color:var(--text3);margin-top:8px">+${dormant.length-10} outros prospectos dormentes</div>`:''}
+      </div>
+    </div>`:''}
+    <div class="dash-grid" style="margin-top:14px">
+      <div class="chart-card">
+        <div class="chart-card-title">Velocidade por etapa</div>
+        <div class="chart-card-sub">Tempo médio (dias) de cada transição observada</div>
+        ${velocity.length?`<div class="chart-canvas-wrap" style="height:280px"><canvas id="chart-velocity"></canvas></div>`:'<div class="empty" style="padding:2rem"><span>Sem dados suficientes. Movimente alguns cards para começar a medir.</span></div>'}
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Heatmap — quando há atividade</div>
+        <div class="chart-card-sub">Concentração por dia da semana × hora (${mKey==monthKey(analyticsDate)?'mês atual':mKey})</div>
+        <div style="margin-top:14px">
+          <div class="heatmap">
+            <div></div>${Array.from({length:24},(_,h)=>`<div class="hm-h">${h%3===0?h:''}</div>`).join('')}
+            ${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map((dn,di)=>`
+              <div class="hm-d">${dn}</div>
+              ${heatmap[di].map((v,h)=>{
+                const intensity=v/heatmapMax;
+                const bg=v?`background:color-mix(in srgb, #E30613 ${Math.max(12,intensity*100)}%, transparent);border:1px solid color-mix(in srgb, #E30613 ${Math.max(15,intensity*100)}%, transparent)`:'';
+                return `<div class="hm-cell" ${v?`data-v="${v}"`:''} style="${bg}" title="${dn} ${pad2(h)}:00 — ${v} evento${v!==1?'s':''}"></div>`;
+              }).join('')}
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+    ${users.length?`<div class="chart-card" style="margin-top:14px">
+      <div class="chart-card-title">Comparativo por usuário</div>
+      <div class="chart-card-sub">Quem mais movimentou o funil em ${monthName}</div>
+      <div style="margin-top:10px">
+        ${users.map((u,i)=>{
+          const s=byUser[u];
+          const uShort=u.split('@')[0];
+          const initial=uShort.charAt(0).toUpperCase();
+          const color=userColors[i%userColors.length];
+          return `<div class="user-row">
+            <div class="user-av" style="--c:${color}">${initial}</div>
+            <div class="user-name">${esc(uShort)}</div>
+            <div class="user-stats">
+              <span><b>${s.leads}</b> leads</span>
+              <span><b>${s.movs}</b> movs</span>
+              <span><b>${s.inter}</b> inter</span>
+              <span style="color:var(--green)"><b>${s.conv}</b> conv</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:''}
     <div class="chart-card" style="margin-top:14px">
       <div class="chart-card-title">Comparativo mensal</div>
       <div class="chart-card-sub">Totais consolidados — base para decisões estratégicas</div>
@@ -1177,7 +1413,21 @@ function renderAnalytics(){
       {label:'Movimentações',data:months6.map(x=>x.movs),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,0.1)',tension:0.3,borderWidth:2},
       {label:'Conversões',data:months6.map(x=>x.conv),borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,0.1)',tension:0.3,borderWidth:2}
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tick,font:{size:11},boxWidth:10}},tooltip:{backgroundColor:'#1A1917',padding:10,cornerRadius:8}},scales:{x:{grid:{display:false},ticks:{color:tick,font:{size:11}}},y:{grid:{color:grid},ticks:{color:tick,font:{size:11},precision:0},beginAtZero:true}}}}));
+    const cv=document.getElementById('chart-velocity');
+    if(cv&&velocity.length)analyticsCharts.push(new Chart(cv,{type:'bar',data:{labels:velocity.map(v=>v.key),datasets:[{label:'Dias (média)',data:velocity.map(v=>Math.round(v.avg*10)/10),backgroundColor:velocity.map(v=>{
+      const fromStage=v.key.split('→')[0].trim();
+      return stageColor(fromStage);
+    }),borderRadius:6,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1A1917',padding:10,cornerRadius:8,callbacks:{afterLabel:ctx=>`${velocity[ctx.dataIndex].count} transição${velocity[ctx.dataIndex].count!==1?'ões':''} registrada${velocity[ctx.dataIndex].count!==1?'s':''}`}}},scales:{x:{grid:{color:grid},ticks:{color:tick,font:{size:10},callback:v=>v+'d'}},y:{grid:{display:false},ticks:{color:tick,font:{size:10.5}}}}}}));
   },30);
+}
+async function archiveMonth(){
+  const d=analyticsDate,y=d.getFullYear(),m=d.getMonth(),mKey=monthKey(d);
+  if(!confirm(`Arquivar ${MESES[m]} ${y}?\n\nSalva um registro imutável dos totais do mês. Substitui qualquer arquivamento anterior.`))return;
+  const tot=computeMonthTotals(mKey);
+  const byU=computeByUser(mKey);
+  const payload={month:mKey,archivedAt:new Date().toISOString(),archivedBy:currentUser(),totals:tot,byUser:byU};
+  try{await saveSnapshot(mKey,payload);toast(`${MESES[m]}/${y} arquivado com sucesso`);renderAnalytics()}
+  catch(e){toast('Erro ao arquivar: '+e.message,'error')}
 }
 function analyticsNav(dir){analyticsDate.setMonth(analyticsDate.getMonth()+dir);renderAnalytics()}
 function analyticsToday(){analyticsDate=new Date();renderAnalytics()}
@@ -1335,7 +1585,22 @@ function renderSettings(){
         </div>
       </div>
       <div style="margin-top:12px;padding:10px 12px;background:var(--amber-bg);border:1px solid var(--amber-mid);border-radius:var(--radius);color:var(--amber);font-size:12px;${settingsDirty?'':'display:none'}">Mudanças não salvas — clique em <b>Salvar alterações</b> para aplicar a todos.</div>
+    </div>
+    <div class="settings-card" style="margin-top:18px">
+      <h3>Metas Mensais</h3>
+      <div class="h-sub">Objetivos mensais acompanhados automaticamente na página Análise</div>
+      <div class="modal-row">
+        <div class="field"><label>Novos Leads / mês</label><input type="number" value="${goalsConfig.leads_month}" oninput="goalsConfig.leads_month=Number(this.value)||0" min="0"></div>
+        <div class="field"><label>Conversões / mês</label><input type="number" value="${goalsConfig.conv_month}" oninput="goalsConfig.conv_month=Number(this.value)||0" min="0"></div>
+      </div>
+      <div class="field"><label>Interações / mês (notas · ligações · e-mails · reuniões)</label><input type="number" value="${goalsConfig.inter_month}" oninput="goalsConfig.inter_month=Number(this.value)||0" min="0"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:4px">
+        <button class="btn primary" onclick="commitGoals()">Salvar metas</button>
+      </div>
     </div>`;
+}
+async function commitGoals(){
+  try{await saveGoalsConfig();toast('Metas salvas')}catch(e){toast('Erro ao salvar metas: '+e.message,'error')}
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
 function stageFieldTyping(i,field,val){editStages[i][field]=val;settingsDirty=true}
@@ -1659,6 +1924,7 @@ function renderModal(){
 async function init(){
   document.getElementById('app').innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:40vh;gap:10px;color:var(--text3);font-size:14px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Carregando dados...</div>`;
   await loadStagesConfig();
+  await loadGoalsConfig();
   prospects=await dbFetch();
   renderFull();
 }
