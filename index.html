@@ -880,7 +880,14 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function initials(nome){const p=(nome||'').trim().split(' ');return(p[0]?.[0]||'')+(p[1]?.[0]||'').toUpperCase()||'?'}
 function avColor(id){const h=id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);return AV_COLORS[h%AV_COLORS.length]}
 
-function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:STAGES[0]||'Lead',notas:'',proximoContato:'',horaContato:'',origem:'',desqualificado:false,motivoDesqualificacao:'',historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
+function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:STAGES[0]||'Lead',notas:'',proximoContato:'',horaContato:'',origem:'',desqualificado:false,motivoDesqualificacao:'',bantB:false,bantA:false,bantN:false,bantT:false,historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
+function bantScore(p){if(!p)return 0;let s=0;if(p.bantB)s+=25;if(p.bantA)s+=25;if(p.bantN)s+=25;if(p.bantT)s+=25;return s}
+function scoreStatus(s){
+  if(s>=75)return{label:'Qualificado',color:'#16A34A',bg:'rgba(22,163,74,0.12)'};
+  if(s>=50)return{label:'Parcialmente qualificado',color:'#D97706',bg:'rgba(217,119,6,0.12)'};
+  if(s>=25)return{label:'Baixa qualificação',color:'#DC2626',bg:'rgba(220,38,38,0.12)'};
+  return{label:'Sem qualificação',color:'#78716C',bg:'rgba(120,113,108,0.12)'};
+}
 function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';renderModal()}
 function closeModal(){modal=null;editId=null;const ov=document.getElementById('modal-overlay');if(ov)ov.remove()}
 async function saveModal(){
@@ -1558,6 +1565,38 @@ async function renderAnalytics(){
       })()}
     </div>
     ${(()=>{
+      const ativos=prospects.filter(p=>!p.desqualificado);
+      if(!ativos.length)return '';
+      const scored=ativos.filter(p=>bantScore(p)>0);
+      const avg=scored.length?Math.round(scored.reduce((a,p)=>a+bantScore(p),0)/scored.length):0;
+      const qualificados=ativos.filter(p=>bantScore(p)>=75).length;
+      const parcial=ativos.filter(p=>{const s=bantScore(p);return s>=50&&s<75}).length;
+      const baixa=ativos.filter(p=>{const s=bantScore(p);return s>0&&s<50}).length;
+      const semScore=ativos.filter(p=>bantScore(p)===0).length;
+      return `<div class="chart-card" style="margin-top:14px">
+        <div class="chart-card-title">Qualificação BANT — pipeline ativo</div>
+        <div class="chart-card-sub">Distribuição dos ${ativos.length} prospectos por score de qualificação · média ${avg}/100</div>
+        <div style="margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div style="padding:14px;background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-lg);text-align:center">
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;color:var(--green)">${qualificados}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Qualificados ≥75</div>
+          </div>
+          <div style="padding:14px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:var(--radius-lg);text-align:center">
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;color:var(--amber)">${parcial}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Parcial 50-74</div>
+          </div>
+          <div style="padding:14px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:var(--radius-lg);text-align:center">
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;color:var(--red)">${baixa}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Baixa 1-49</div>
+          </div>
+          <div style="padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);text-align:center">
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;color:var(--text3)">${semScore}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Não qualificado</div>
+          </div>
+        </div>
+      </div>`;
+    })()}
+    ${(()=>{
       const desqs=prospects.filter(p=>p.desqualificado);
       if(!desqs.length)return '';
       const byMotivo={};
@@ -2212,8 +2251,9 @@ function renderContent(){
               <span class="card-val">${fmt(p.valor)}</span>
               ${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span class="date-none">Sem data</span>`}
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap">
               ${p.desqualificado?`<span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:99px;font-weight:600;font-size:10.5px">✕ ${esc(p.motivoDesqualificacao||'Desqualificado')}</span>`:''}
+              ${(()=>{const s=bantScore(p);if(!s)return '';const st=scoreStatus(s);return `<span style="background:${st.bg};color:${st.color};padding:2px 7px;border-radius:99px;font-weight:700;font-size:10.5px" title="BANT: ${st.label}">${s}</span>`})()}
               ${p.origem?`<span style="background:var(--surface2);color:var(--text2);padding:2px 8px;border-radius:99px;font-weight:500;font-size:10.5px">${esc(p.origem)}</span>`:''}
               ${hl?`<span>${hl} interaç${hl>1?'ões':'ão'}</span>`:''}
             </div>
@@ -2318,6 +2358,19 @@ function renderModal(){
           <option value="">— Selecione —</option>
           ${origensConfig.map(o=>`<option value="${esc(o)}"${modal.origem===o?' selected':''}>${esc(o)}</option>`).join('')}
         </select>
+      </div>
+      <div class="field" style="padding:14px;border:1px dashed var(--border2);border-radius:var(--radius)">
+        <label style="margin-bottom:10px;display:block">Qualificação BANT <span style="text-transform:none;color:var(--text3);font-weight:400;font-size:10.5px;letter-spacing:0">marque o que se confirma</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text);text-transform:none;letter-spacing:0"><input type="checkbox" ${modal.bantB?'checked':''} onchange="setField('bantB',this.checked);renderModal()" style="width:14px;height:14px;cursor:pointer"><b>Budget</b> <span style="color:var(--text3)">— tem orçamento</span></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text);text-transform:none;letter-spacing:0"><input type="checkbox" ${modal.bantA?'checked':''} onchange="setField('bantA',this.checked);renderModal()" style="width:14px;height:14px;cursor:pointer"><b>Authority</b> <span style="color:var(--text3)">— é decisor</span></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text);text-transform:none;letter-spacing:0"><input type="checkbox" ${modal.bantN?'checked':''} onchange="setField('bantN',this.checked);renderModal()" style="width:14px;height:14px;cursor:pointer"><b>Need</b> <span style="color:var(--text3)">— tem necessidade</span></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text);text-transform:none;letter-spacing:0"><input type="checkbox" ${modal.bantT?'checked':''} onchange="setField('bantT',this.checked);renderModal()" style="width:14px;height:14px;cursor:pointer"><b>Timing</b> <span style="color:var(--text3)">— é o momento</span></label>
+        </div>
+        ${(()=>{const s=bantScore(modal);const st=scoreStatus(s);return `<div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+          <div style="flex:1;height:8px;background:var(--surface2);border-radius:99px;overflow:hidden"><div style="height:100%;width:${s}%;background:${st.color};border-radius:99px;transition:width 0.3s"></div></div>
+          <div style="font-size:13px;font-weight:700;color:${st.color};min-width:110px;text-align:right">${s}/100 <span style="font-size:10.5px;background:${st.bg};color:${st.color};padding:2px 8px;border-radius:99px;font-weight:600;margin-left:4px">${st.label}</span></div>
+        </div>`})()}
       </div>
       <div class="field" style="padding:12px;border:1px dashed var(--border2);border-radius:var(--radius);background:${modal.desqualificado?'var(--red-bg)':'transparent'}">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:${modal.desqualificado?'var(--red)':'var(--text)'}">
