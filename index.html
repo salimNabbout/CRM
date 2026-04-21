@@ -466,17 +466,44 @@ function buildICS(p){
     'END:VEVENT','END:VCALENDAR'
   ].join('\r\n');
 }
-function downloadICS(){
-  const ics=buildICS(modal);
-  if(!ics){toast('Defina uma data em "Próximo contato" antes','error');return}
-  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
-  const a=document.createElement('a');
-  const slug=(modal.empresa||modal.nome||'reuniao').replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40);
-  a.href=URL.createObjectURL(blob);
-  a.download=`reuniao-${slug}.ics`;
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  toast('Arquivo .ics baixado — abra para adicionar ao Outlook');
+function openOutlookEvent(){
+  const p=modal;
+  if(!p.proximoContato){toast('Defina uma data em "Próximo contato" antes','error');return}
+  const [Y,M,D]=p.proximoContato.split('-');
+  const hora=(p.horaContato||'').trim();
+  let startISO,endISO;
+  if(/^\d{2}:\d{2}$/.test(hora)){
+    const [h,m]=hora.split(':');
+    const start=new Date(+Y,+M-1,+D,+h,+m);
+    const end=new Date(start.getTime()+60*60*1000);
+    const fmt=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
+    startISO=fmt(start);endISO=fmt(end);
+  } else {
+    startISO=`${Y}-${M}-${D}T09:00:00`;
+    endISO=`${Y}-${M}-${D}T10:00:00`;
+  }
+  const subject=`Reunião — ${p.empresa||p.nome||'Prospect'}`;
+  const bodyParts=[];
+  if(p.nome)bodyParts.push(`Contato: ${p.nome}`);
+  if(p.contato)bodyParts.push(`Cargo: ${p.contato}`);
+  if(p.telefone)bodyParts.push(`Telefone: ${p.telefone}`);
+  if(p.email)bodyParts.push(`E-mail: ${p.email}`);
+  if(p.valor)bodyParts.push(`Valor estimado: R$ ${Number(p.valor).toLocaleString('pt-BR')}`);
+  if(p.notas)bodyParts.push('','Notas:',p.notas);
+  const body=bodyParts.join('\n');
+  const params=new URLSearchParams({
+    path:'/calendar/action/compose',
+    rru:'addevent',
+    subject,
+    body,
+    startdt:startISO,
+    enddt:endISO,
+    location:p.empresa||'',
+    allday:'false'
+  });
+  if(p.email)params.append('to',p.email);
+  const url=`https://outlook.office.com/calendar/0/deeplink/compose?${params.toString()}`;
+  window.open(url,'_blank','noopener');
 }
 function exportCSV(){const cols=['Nome','Empresa','Contato','E-mail','Telefone','Etapa','Valor','Próximo Contato','Notas','Criado em'];const rows=prospects.map(p=>[p.nome,p.empresa,p.contato,p.email,p.telefone,p.stage,p.valor||'',fmtDateFull(p.proximoContato)||'',p.notas,fmtDateFull(p.criadoEm)||p.criadoEm||'']);const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='prospects.csv';a.click()}
 function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;return matchS&&matchSt})}
@@ -784,7 +811,7 @@ function renderModal(){
   mhtml+=`</div>
     <div class="modal-footer">
       ${editId?`<button class="btn del-btn" onclick="deleteProspect()">${ICONS.trash} Excluir</button>`:''}
-      ${modal.proximoContato?`<button class="btn" onclick="downloadICS()" title="Gera arquivo .ics para adicionar ao Outlook">${ICONS.calendar} Agenda</button>`:''}
+      ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Abre o Outlook com o evento já preenchido">${ICONS.calendar} Agendar no Outlook</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveModal()">Salvar</button>
     </div>
