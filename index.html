@@ -703,9 +703,12 @@ async function sendTemplate(tplId){
     let subject='',body=text;
     const mt=text.match(/^Assunto:\s*([^\n]+)\n+([\s\S]*)$/);
     if(mt){subject=mt[1].trim();body=mt[2].trim()}
-    const enc=s=>encodeURIComponent(s).replace(/%20/g,'%20');
-    const link=`https://outlook.office.com/mail/deeplink/compose?path=%2Fmail%2Faction%2Fcompose&to=${enc(modal.email)}&subject=${enc(subject)}&body=${enc(body)}`;
+    // Copia assunto + corpo formatados para o clipboard (fallback se Outlook não formatar certo)
+    try{await navigator.clipboard.writeText(`Assunto: ${subject}\n\n${body}`)}catch{}
+    // Abre Outlook Web com dados pré-preenchidos (to/subject funciona, body pode vir com + em algumas versões)
+    const link=`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(modal.email)}&subject=${encodeURIComponent(subject)}`;
     window.open(link,'_blank','noopener');
+    toast('E-mail aberto · corpo copiado (Ctrl+V caso precise)');
     await logInteracao('E-mail','Enviou e-mail: '+tpl.nome);
   } else if(tpl.tipo==='LinkedIn'){
     try{await navigator.clipboard.writeText(text);toast('Mensagem copiada — cole no LinkedIn')}
