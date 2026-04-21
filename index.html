@@ -67,6 +67,7 @@ html.dark *{font-weight:400}
 ::-webkit-scrollbar-thumb:hover{background:var(--text3)}
 
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#E30613 0%,#BA0410 45%,#7C020A 80%,#3E0105 100%);z-index:200;pointer-events:none}
 
 /* Topbar */
 #topbar-wrap{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:box-shadow 0.2s}
