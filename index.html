@@ -12,7 +12,7 @@
   --bg:#F4F3F0;--surface:#FFFFFF;--surface2:#EDECE8;--surface3:#E6E4DF;
   --text:#1C1917;--text2:#78716C;--text3:#A8A29E;
   --border:#E2E0DA;--border2:#CCC9C0;
-  --accent:#1C1917;--accent-fg:#FFFFFF;
+  --accent:#E30613;--accent-fg:#FFFFFF;--accent-dark:#B30410;--brand-black:#1A1A1A;
   --blue:#2563EB;--blue-bg:#EFF6FF;--blue-mid:#BFDBFE;--blue-light:#DBEAFE;
   --amber:#D97706;--amber-bg:#FFFBEB;--amber-mid:#FDE68A;
   --green:#16A34A;--green-bg:#F0FDF4;--green-mid:#BBF7D0;
@@ -28,6 +28,7 @@ html.dark{
   --bg:#111110;--surface:#1A1917;--surface2:#222120;--surface3:#2A2927;
   --text:#F5F3EF;--text2:#9C968F;--text3:#655F59;
   --border:#2A2824;--border2:#38342E;
+  --accent:#EF3340;--accent-fg:#FFFFFF;--accent-dark:#C42029;--brand-black:#F5F3EF;
   --blue:#3B82F6;--blue-bg:#1A2A44;--blue-mid:#1E3A5F;--blue-light:#162338;
   --amber:#F59E0B;--amber-bg:#281F00;--amber-mid:#3D2E00;
   --green:#22C55E;--green-bg:#0C2416;--green-mid:#14391F;
@@ -39,6 +40,7 @@ html.dark *{font-weight:400}
   --bg:#111110;--surface:#1A1917;--surface2:#222120;--surface3:#2A2927;
   --text:#F5F3EF;--text2:#9C968F;--text3:#655F59;
   --border:#2A2824;--border2:#38342E;
+  --accent:#EF3340;--accent-fg:#FFFFFF;--accent-dark:#C42029;--brand-black:#F5F3EF;
   --blue:#3B82F6;--blue-bg:#1A2A44;--blue-mid:#1E3A5F;--blue-light:#162338;
   --amber:#F59E0B;--amber-bg:#281F00;--amber-mid:#3D2E00;
   --green:#22C55E;--green-bg:#0C2416;--green-mid:#14391F;
@@ -60,10 +62,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 #topbar-wrap.scrolled{box-shadow:0 2px 12px rgba(0,0,0,0.08)}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1180px;margin:0 auto;padding:0 1.5rem;height:var(--topbar-h);flex-wrap:wrap;gap:12px}
 .brand{display:flex;align-items:center;gap:11px}
-.brand-icon{width:38px;height:38px;background:var(--accent);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.18)}
-.brand-icon svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-0.4px}
-.brand-sub{font-size:11.5px;color:var(--text3);font-weight:400;margin-top:1px}
+.brand-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-icon svg{width:42px;height:42px;display:block}
+.brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:800;color:var(--brand-black);letter-spacing:-0.3px;text-transform:uppercase}
+.brand-text .b-red{color:var(--accent)}
+.brand-sub{font-size:11px;color:var(--text3);font-weight:500;margin-top:2px;letter-spacing:0.3px}
 .topbar-actions{display:flex;gap:8px;align-items:center}
 
 /* Buttons */
@@ -71,8 +74,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .btn:hover{background:var(--surface2)}
 .btn:active{transform:scale(0.97)}
 .btn svg{width:14px;height:14px;flex-shrink:0}
-.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.18)}
-.btn.primary:hover{opacity:0.86;box-shadow:0 3px 10px rgba(0,0,0,0.2)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);box-shadow:0 1px 4px rgba(227,6,19,0.25);font-weight:600}
+.btn.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark);box-shadow:0 3px 10px rgba(227,6,19,0.32)}
 .btn.ghost{border-color:transparent;background:transparent}
 .btn.ghost:hover{background:var(--surface2)}
 .btn.active{background:var(--surface);border-color:var(--border2);box-shadow:inset 0 1px 2px rgba(0,0,0,0.06)}
@@ -89,7 +92,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:box-shadow 0.2s,transform 0.2s}
 .metric:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
 .metric-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
-.metric.m-total .metric-accent{background:linear-gradient(90deg,#1C1917 0%,#57534E 100%)}
+.metric.m-total .metric-accent{background:linear-gradient(90deg,#E30613 0%,#1A1A1A 100%)}
 .metric.m-stages .metric-accent{background:linear-gradient(90deg,#3B82F6 0%,#7C3AED 100%)}
 .metric.m-today .metric-accent{background:linear-gradient(90deg,#F59E0B 0%,#EF4444 100%)}
 .metric.m-pipeline .metric-accent{background:linear-gradient(90deg,#16A34A 0%,#0D9488 100%)}
@@ -250,9 +253,11 @@ tbody tr:hover td{background:var(--surface2)}
 /* Login screen */
 #login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem}
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)}
-.login-brand{display:flex;align-items:center;gap:11px;margin-bottom:24px;justify-content:center}
-.login-brand .brand-icon{width:44px;height:44px}
-.login-brand .brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800}
+.login-brand{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:26px}
+.login-brand .brand-icon{width:64px;height:64px}
+.login-brand .brand-icon svg{width:64px;height:64px}
+.login-brand .brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.3px;text-transform:uppercase;color:var(--brand-black)}
+.login-brand .brand-text .b-red{color:var(--accent)}
 .login-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;text-align:center}
 .login-sub{font-size:13px;color:var(--text3);margin-bottom:22px;text-align:center}
 .login-err{background:var(--red-bg);border:1px solid var(--red-mid);color:var(--red);padding:10px 12px;border-radius:var(--radius);font-size:12px;margin-bottom:14px}
@@ -266,10 +271,10 @@ tbody tr:hover td{background:var(--surface2)}
 <div id="login-screen" style="display:none">
   <div class="login-card">
     <div class="login-brand">
-      <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="brand-text">CRM Prospecção</div>
+      <div class="brand-icon"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="44" ry="34" transform="rotate(-18 50 50)" fill="none" stroke="#E30613" stroke-width="7" stroke-linecap="round"/><ellipse cx="50" cy="50" rx="46" ry="12" transform="rotate(-12 50 50)" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/></svg></div>
+      <div class="brand-text">CETEM <span class="b-red">Automação</span></div>
     </div>
-    <div class="login-title">Acesso restrito</div>
+    <div class="login-title">CRM Prospecção</div>
     <div class="login-sub">Entre com seu e-mail e senha</div>
     <div id="login-err" style="display:none" class="login-err"></div>
     <form id="login-form" onsubmit="return doLogin(event)">
@@ -425,7 +430,7 @@ function exportCSV(){const cols=['Nome','Empresa','Contato','E-mail','Telefone',
 function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;return matchS&&matchSt})}
 
 const ICONS={
-  logo:`<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  logo:`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="44" ry="34" transform="rotate(-18 50 50)" fill="none" stroke="#E30613" stroke-width="7" stroke-linecap="round"/><ellipse cx="50" cy="50" rx="46" ry="12" transform="rotate(-12 50 50)" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/></svg>`,
   search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`,
   plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
@@ -487,8 +492,8 @@ function renderTopbar(){
     <div class="brand">
       <div class="brand-icon">${ICONS.logo}</div>
       <div>
-        <div class="brand-text">CRM Prospecção</div>
-        <div class="brand-sub">${all.length} prospect${all.length!==1?'s':''} no pipeline</div>
+        <div class="brand-text">CETEM <span class="b-red">Automação</span></div>
+        <div class="brand-sub">CRM · ${all.length} prospect${all.length!==1?'s':''} no pipeline</div>
       </div>
     </div>
     <div class="topbar-actions">
