@@ -681,6 +681,44 @@ async function saveCadenciaConfig(){
   });
   if(!r.ok)throw new Error(await r.text());
 }
+function computeSuggestions(){
+  const sugs=[];
+  const now=new Date();
+  prospects.filter(p=>!p.desqualificado&&p.stage!==LAST_STAGE()).forEach(p=>{
+    // 1. Próxima ação da cadência vencida ou hoje
+    const nc=nextCadenceStep(p);
+    if(nc&&nc.daysUntil<=0){
+      sugs.push({p,tipo:'cadencia',prioridade:nc.daysUntil<0?3:2,msg:`${nc.tipo} — ${nc.acao}`,sub:nc.daysUntil<0?`Atrasado ${-nc.daysUntil}d`:'Hoje'});
+    }
+    // 2. Dormente 14+ dias
+    const hist=(p.historico||[]).slice().sort((a,b)=>(b.data+(b.hora||'')).localeCompare(a.data+(a.hora||'')));
+    if(hist.length){
+      const last=hist[0];
+      const lastDate=new Date(last.data+'T'+(last.hora||'00:00'));
+      const daysStuck=Math.floor((now-lastDate)/86400000);
+      if(daysStuck>=14&&(!nc||nc.daysUntil>0)){
+        sugs.push({p,tipo:'dormente',prioridade:3,msg:'Reativar com mensagem de retomada',sub:`${daysStuck}d sem atividade`});
+      }
+    }
+    // 3. Sem BANT marcado mas está em etapa avançada
+    const stageIdx=STAGES.indexOf(p.stage);
+    const bs=bantScore(p);
+    if(stageIdx>=2&&bs===0){
+      sugs.push({p,tipo:'qualificar',prioridade:2,msg:'Qualificar BANT',sub:'Etapa avançada sem qualificação'});
+    }
+    // 4. Qualificado mas ainda não avançou
+    if(bs>=75&&stageIdx<STAGES.length-1){
+      sugs.push({p,tipo:'avancar',prioridade:1,msg:`Avançar para "${STAGES[stageIdx+1]}"`,sub:`BANT ${bs}/100 · pronto para reunião`});
+    }
+    // 5. Próximo contato hoje sem interação hoje
+    const tYmd=today();
+    if(p.proximoContato===tYmd){
+      const hojeInter=(p.historico||[]).filter(h=>h.data===tYmd&&['Ligação','E-mail','Reunião','Nota'].includes(h.tipo)).length;
+      if(!hojeInter)sugs.push({p,tipo:'agendado',prioridade:3,msg:'Executar contato agendado',sub:'Próximo contato marcado para hoje'});
+    }
+  });
+  return sugs.sort((a,b)=>b.prioridade-a.prioridade).slice(0,12);
+}
 function nextCadenceStep(p){
   if(!p||p.desqualificado||p.stage===LAST_STAGE())return null;
   const criado=p.criadoEm||today();
@@ -2379,6 +2417,26 @@ function renderDashboard(){
         <div class="chart-canvas-wrap"><canvas id="chart-value"></canvas></div>
       </div>
     </div>
+    ${(()=>{
+      const sugs=computeSuggestions();
+      if(!sugs.length)return '';
+      const prioConfig={3:{color:'#DC2626',bg:'rgba(220,38,38,0.08)',label:'URGENTE'},2:{color:'#D97706',bg:'rgba(217,119,6,0.08)',label:'IMPORTANTE'},1:{color:'#16A34A',bg:'rgba(22,163,74,0.08)',label:'OPORTUNIDADE'}};
+      const tipoIcon={cadencia:'⚡',dormente:'💤',qualificar:'🎯',avancar:'🚀',agendado:'📅'};
+      return `<div class="chart-card" style="margin-top:14px">
+        <div class="chart-card-title">Ações sugeridas para hoje</div>
+        <div class="chart-card-sub">${sugs.length} sugestão${sugs.length!==1?'ões':''} baseada${sugs.length!==1?'s':''} em cadência, dormentes e qualificação</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+          ${sugs.map(s=>{const pc=prioConfig[s.prioridade];return `<div onclick="openEdit('${s.p.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:${pc.bg};border:1px solid ${pc.color};border-left-width:3px;border-radius:var(--radius);cursor:pointer;transition:all 0.15s" onmouseover="this.style.transform='translateX(2px)'" onmouseout="this.style.transform=''">
+            <div style="font-size:18px;flex-shrink:0">${tipoIcon[s.tipo]||'•'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.3">${esc(s.p.nome)}${s.p.empresa?` <span style="color:var(--text3);font-weight:400">· ${esc(s.p.empresa)}</span>`:''}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">${esc(s.msg)} <span style="color:${pc.color};font-weight:600">· ${esc(s.sub)}</span></div>
+            </div>
+            <div style="font-size:9.5px;font-weight:700;color:${pc.color};background:${pc.bg};padding:3px 8px;border-radius:99px;letter-spacing:0.5px;flex-shrink:0">${pc.label}</div>
+          </div>`}).join('')}
+        </div>
+      </div>`;
+    })()}
     <div class="chart-card" style="margin-top:14px">
       <div class="chart-card-title">Próximos Contatos</div>
       <div class="chart-card-sub">Atrasados, hoje e próximos 14 dias</div>
