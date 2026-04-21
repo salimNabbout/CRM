@@ -305,6 +305,49 @@ tbody tr:hover td{background:var(--surface2)}
 .stage-row .s-del:hover{background:var(--red-bg);border-color:var(--red-mid)}
 .settings-actions{display:flex;gap:10px;justify-content:space-between;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
 
+/* === V2: Agenda === */
+.agenda-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.agenda-nav{display:flex;gap:4px;align-items:center}
+.agenda-nav .nav-arrow{width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1}
+.agenda-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:700;color:var(--text);margin-left:12px;text-transform:capitalize}
+.cal-month{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow)}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface2);border-bottom:1px solid var(--border)}
+.cal-head>div{padding:10px 6px;text-align:center;font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(108px,1fr)}
+.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 6px;cursor:pointer;transition:background 0.12s;position:relative;min-height:108px;overflow:hidden;display:flex;flex-direction:column;gap:4px}
+.cal-cell:hover{background:var(--surface2)}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell.outside{background:var(--surface2);opacity:0.45}
+.cal-cell.today .cal-day{background:var(--accent);color:#fff;font-weight:700}
+.cal-cell.weekend{background:color-mix(in srgb,var(--surface2) 60%,transparent)}
+.cal-day{font-size:12.5px;font-weight:600;color:var(--text);width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0}
+.cal-events{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.cal-evt{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:5px;background:color-mix(in srgb,var(--c) 14%,transparent);border-left:2px solid var(--c);font-size:10.5px;cursor:pointer;transition:all 0.12s;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.35}
+.cal-evt:hover{background:color-mix(in srgb,var(--c) 26%,transparent)}
+.cal-evt-time{font-weight:700;color:var(--c);flex-shrink:0;font-size:10px}
+.cal-evt-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.cal-more{font-size:10px;color:var(--text3);padding:1px 6px;font-weight:600;cursor:pointer}
+.cal-more:hover{color:var(--text)}
+.agenda-group{margin-bottom:22px}
+.agenda-group-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.7px;display:flex;align-items:center;gap:8px}
+.agenda-group-title .count{background:var(--surface2);color:var(--text3);padding:2px 9px;border-radius:99px;font-size:10.5px}
+.agenda-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--c,var(--border));border-radius:var(--radius-lg);cursor:pointer;transition:all 0.15s;box-shadow:var(--shadow);margin-bottom:6px}
+.agenda-item:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.agenda-item.late{border-left-color:var(--red)}
+.agenda-when{flex-shrink:0;text-align:center;min-width:60px;padding:6px 10px;border-right:1px solid var(--border)}
+.agenda-date{font-size:13px;font-weight:700;color:var(--text);line-height:1.1}
+.agenda-time{font-size:11px;color:var(--text2);margin-top:2px}
+.agenda-body{flex:1;min-width:0}
+.agenda-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.agenda-empresa{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){
+  .cal-cell{min-height:80px;padding:6px 4px}
+  .cal-evt-name{display:none}
+  .cal-events{align-items:center}
+  .cal-evt{padding:3px;border-radius:50%;width:7px;height:7px;background:var(--c);border:none;gap:0}
+  .cal-evt-time{display:none}
+}
+
 /* === V2: Dashboard === */
 .dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:1.25rem}
 @media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
@@ -852,6 +895,7 @@ function renderSidebar(){
   const items=[
     {id:'pipeline',label:'Pipeline',icon:ICONS.layers},
     {id:'dashboard',label:'Dashboard',icon:ICONS.trending},
+    {id:'agenda',label:'Agenda',icon:ICONS.calendar},
     {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers}
   ];
   nav.innerHTML=`<div class="s-section">Navegação</div>`+
@@ -883,7 +927,7 @@ function setPage(p){
 function renderTopbar(){
   const all=prospects;
   const page=window.currentPage||'pipeline';
-  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospecto${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
+  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospecto${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},agenda:{t:'Agenda',s:'Compromissos e próximos contatos'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
   const cur=titles[page]||titles.pipeline;
   document.getElementById('topbar').innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;min-width:0">
@@ -909,6 +953,7 @@ function renderFull(){
   const page=window.currentPage||'pipeline';
   const app=document.getElementById('app');
   if(page==='dashboard'){renderDashboard();return}
+  if(page==='agenda'){renderAgenda();return}
   if(page==='settings'){renderSettings();return}
   const all=prospects;
   const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
@@ -967,6 +1012,119 @@ function renderFull(){
 
   app.innerHTML=html;
   renderContent();
+}
+
+let agendaView='month',agendaDate=new Date();
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function ymd(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`}
+function parseYmd(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function agendaNav(dir){if(agendaView==='month')agendaDate.setMonth(agendaDate.getMonth()+dir);else agendaDate.setDate(agendaDate.getDate()+7*dir);renderAgenda()}
+function agendaToday(){agendaDate=new Date();renderAgenda()}
+function setAgendaView(v){agendaView=v;renderAgenda()}
+function agendaTitle(){if(agendaView==='month')return `${MESES[agendaDate.getMonth()]} ${agendaDate.getFullYear()}`;return 'Lista de Compromissos'}
+function agendaNewAt(ymdStr){openNew();modal.proximoContato=ymdStr;renderModal()}
+function renderAgenda(){
+  const app=document.getElementById('app');
+  app.innerHTML=`
+    <div class="agenda-toolbar">
+      <div class="agenda-nav">
+        <button class="btn ghost nav-arrow" onclick="agendaNav(-1)" title="Anterior">‹</button>
+        <button class="btn" onclick="agendaToday()">Hoje</button>
+        <button class="btn ghost nav-arrow" onclick="agendaNav(1)" title="Próximo">›</button>
+        <span class="agenda-title">${agendaTitle()}</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="view-toggle">
+          <button class="btn${agendaView==='month'?' active':''}" onclick="setAgendaView('month')">${ICONS.grid} Mês</button>
+          <button class="btn${agendaView==='list'?' active':''}" onclick="setAgendaView('list')">${ICONS.list} Lista</button>
+        </div>
+        <button class="btn primary" onclick="agendaNewAt(ymd(new Date()))">${ICONS.plus} Novo compromisso</button>
+      </div>
+    </div>
+    <div id="agenda-body"></div>`;
+  if(agendaView==='month')renderAgendaMonth();else renderAgendaList();
+}
+function renderAgendaMonth(){
+  const area=document.getElementById('agenda-body');
+  const y=agendaDate.getFullYear(),m=agendaDate.getMonth();
+  const first=new Date(y,m,1);
+  const firstDay=first.getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const daysInPrev=new Date(y,m,0).getDate();
+  const cells=[];
+  for(let i=firstDay-1;i>=0;i--)cells.push({y:m===0?y-1:y,m:m===0?11:m-1,d:daysInPrev-i,outside:true});
+  for(let d=1;d<=daysInMonth;d++)cells.push({y,m,d,outside:false});
+  let nd=1;while(cells.length<42)cells.push({y:m===11?y+1:y,m:m===11?0:m+1,d:nd++,outside:true});
+  const tYmd=ymd(new Date());
+  const eventMap={};
+  prospects.filter(p=>p.proximoContato).forEach(p=>{(eventMap[p.proximoContato]=eventMap[p.proximoContato]||[]).push(p)});
+  Object.values(eventMap).forEach(arr=>arr.sort((a,b)=>(a.horaContato||'99:99').localeCompare(b.horaContato||'99:99')));
+  let html=`<div class="cal-month"><div class="cal-head">${DIAS.map(d=>`<div>${d}</div>`).join('')}</div><div class="cal-grid">`;
+  cells.forEach((c,i)=>{
+    const cellYmd=`${c.y}-${pad2(c.m+1)}-${pad2(c.d)}`;
+    const evts=eventMap[cellYmd]||[];
+    const isToday=cellYmd===tYmd;
+    const isWknd=i%7===0||i%7===6;
+    html+=`<div class="cal-cell${c.outside?' outside':''}${isToday?' today':''}${isWknd?' weekend':''}" onclick="agendaNewAt('${cellYmd}')">
+      <div class="cal-day">${c.d}</div>
+      <div class="cal-events">
+        ${evts.slice(0,3).map(e=>`<div class="cal-evt" style="--c:${stageColor(e.stage)}" onclick="event.stopPropagation();openEdit('${e.id}')" title="${esc((e.horaContato?e.horaContato+' — ':'')+e.nome+(e.empresa?' ('+e.empresa+')':''))}">
+          ${e.horaContato?`<span class="cal-evt-time">${esc(e.horaContato)}</span>`:''}
+          <span class="cal-evt-name">${esc(e.nome)}</span>
+        </div>`).join('')}
+        ${evts.length>3?`<div class="cal-more" onclick="event.stopPropagation();agendaJumpTo('${cellYmd}')">+${evts.length-3} mais</div>`:''}
+      </div>
+    </div>`;
+  });
+  html+=`</div></div>`;
+  area.innerHTML=html;
+}
+function agendaJumpTo(ymdStr){agendaView='list';agendaDate=parseYmd(ymdStr);renderAgenda()}
+function renderAgendaList(){
+  const area=document.getElementById('agenda-body');
+  const t=new Date();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  const evts=prospects.filter(p=>p.proximoContato).map(p=>({p,d:parseYmd(p.proximoContato)})).sort((a,b)=>{
+    const da=a.p.proximoContato+' '+(a.p.horaContato||'00:00');
+    const db=b.p.proximoContato+' '+(b.p.horaContato||'00:00');
+    return da.localeCompare(db);
+  });
+  const groups={};
+  evts.forEach(({p,d})=>{
+    const diff=Math.floor((d-t0)/86400000);
+    let key;
+    if(diff<0)key='Atrasados';
+    else if(diff===0)key='Hoje';
+    else if(diff===1)key='Amanhã';
+    else if(diff<=7)key='Esta semana';
+    else if(diff<=30)key='Próximos 30 dias';
+    else key='Mais tarde';
+    (groups[key]=groups[key]||[]).push({p,d,diff});
+  });
+  const order=['Atrasados','Hoje','Amanhã','Esta semana','Próximos 30 dias','Mais tarde'];
+  let html='';
+  order.forEach(key=>{
+    if(!groups[key])return;
+    html+=`<div class="agenda-group"><div class="agenda-group-title">${key}<span class="count">${groups[key].length}</span></div>`;
+    groups[key].forEach(({p,d,diff})=>{
+      const dayName=DIAS[d.getDay()];
+      const dateStr=`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}`;
+      html+=`<div class="agenda-item${diff<0?' late':''}" style="--c:${stageColor(p.stage)}" onclick="openEdit('${p.id}')">
+        <div class="agenda-when">
+          <div class="agenda-date">${dateStr}</div>
+          <div class="agenda-time">${dayName}${p.horaContato?' · '+esc(p.horaContato):''}</div>
+        </div>
+        <div class="agenda-body">
+          <div class="agenda-name">${esc(p.nome)}</div>
+          <div class="agenda-empresa">${esc(p.empresa)||'—'}${p.notas?' · '+esc(p.notas.slice(0,60)):''}</div>
+        </div>
+        <span class="badge dyn" style="--c:${stageColor(p.stage)};--c-bg:${hex2rgba(stageColor(p.stage),0.12)}">${esc(p.stage)}</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  if(!evts.length)html=`<div class="empty" style="padding:3rem"><span>Nenhum compromisso agendado. Clique em <b>Novo compromisso</b> para adicionar.</span></div>`;
+  area.innerHTML=html;
 }
 
 let editStages=null,settingsDirty=false,stageDragIdx=null;
