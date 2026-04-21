@@ -510,6 +510,9 @@ const AV_COLORS=['av-blue','av-amber','av-green','av-purple','av-red'];
 // Supabase config
 const SB_URL='https://bubdoqvlsodiidhcarey.supabase.co';
 const SB_KEY='sb_publishable_4p4W83oDOtlSNRJUj16TFA_Ptve7SPv';
+// Lista de administradores - têm acesso a Dashboard e Configurações
+const ADMINS=['salim@cetemrj.com.br'];
+function isAdmin(){return ADMINS.includes((session?.user?.email||'').toLowerCase())}
 const SB_API=`${SB_URL}/rest/v1/prospects`;
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'crm_auth'}});
 let session=null;
@@ -1461,13 +1464,14 @@ function renderSidebar(){
   const nav=document.getElementById('sidebar-nav');
   const ftr=document.getElementById('sidebar-footer');
   if(!nav||!ftr)return;
+  const admin=isAdmin();
   const items=[
     {id:'pipeline',label:'Pipeline',icon:ICONS.layers,color:'#2563EB'},
-    {id:'dashboard',label:'Dashboard',icon:ICONS.trending,color:'#16A34A'},
+    {id:'dashboard',label:'Dashboard',icon:ICONS.trending,color:'#16A34A',adminOnly:true},
     {id:'analytics',label:'Análise',icon:ICONS.chart||ICONS.trending,color:'#EC4899'},
     {id:'agenda',label:'Agenda',icon:ICONS.calendar,color:'#7C3AED'},
-    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#F97316'}
-  ];
+    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#F97316',adminOnly:true}
+  ].filter(it=>!it.adminOnly||admin);
   nav.innerHTML=`<div class="s-section">Navegação</div>`+
     items.map(it=>`<button class="nav-item${(window.currentPage||'pipeline')===it.id?' active':''}" onclick="setPage('${it.id}')" style="--ic:${it.color}">${it.icon}<span>${it.label}</span></button>`).join('');
   const email=session?.user?.email||'';
@@ -1477,7 +1481,7 @@ function renderSidebar(){
     <div class="s-user">
       <div class="s-user-av">${initial}</div>
       <div class="s-user-info">
-        <div class="s-user-name">${esc(email.split('@')[0])}</div>
+        <div class="s-user-name">${esc(email.split('@')[0])}${admin?' <span style="background:var(--accent);color:#fff;font-size:9px;padding:2px 6px;border-radius:99px;font-weight:700;margin-left:4px;letter-spacing:0.5px">ADMIN</span>':''}</div>
         <div class="s-user-email">${esc(email)}</div>
       </div>
     </div>
@@ -1486,6 +1490,9 @@ function renderSidebar(){
     <button class="nav-item" onclick="doLogout()" style="color:var(--red);--ic:var(--red)">${ICONS.logout}<span>Sair</span></button>`;
 }
 function setPage(p){
+  if((p==='dashboard'||p==='settings')&&!isAdmin()){
+    toast('Acesso restrito aos administradores','error');return;
+  }
   if(window.currentPage==='settings'&&p!=='settings'&&settingsDirty){
     if(!confirm('Você tem mudanças não salvas em Configurações. Sair mesmo assim?'))return;
   }
@@ -1519,6 +1526,10 @@ function renderTopbar(){
 
 function renderFull(){
   renderSidebar();
+  // Guard páginas restritas
+  if((window.currentPage==='dashboard'||window.currentPage==='settings')&&!isAdmin()){
+    window.currentPage='pipeline';
+  }
   renderTopbar();
   const page=window.currentPage||'pipeline';
   const app=document.getElementById('app');
