@@ -886,8 +886,7 @@ function renderTopbar(){
         <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">${ICONS.grid} Kanban</button>
         <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button>
       </div>
-      <button class="btn ghost" onclick="exportPDF()" title="Exportar PDF">${ICONS.file} PDF</button>
-      <button class="btn ghost" onclick="exportCSV()" title="Exportar CSV">${ICONS.download} CSV</button>
+      <div style="display:flex;gap:2px"><button class="btn ghost" onclick="exportPDF()" title="Exportar PDF">${ICONS.file} PDF</button><button class="btn ghost" onclick="exportCSV()" title="Exportar CSV">${ICONS.download} CSV</button></div>
       <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo prospect</button>`:''}
     </div>`;
 }
