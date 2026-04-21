@@ -337,7 +337,8 @@ html.dark .s-logo img,html.dark .brand-icon img,html.dark .login-brand img{filte
 #main-content{flex:1;margin-left:240px;display:flex;flex-direction:column;min-height:100vh;width:calc(100% - 240px)}
 #topbar-wrap{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:box-shadow 0.2s}
 #topbar-wrap.scrolled{box-shadow:0 2px 12px rgba(0,0,0,0.08)}
-.topbar{max-width:none;padding:0 28px;height:64px;margin:0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar{max-width:none;padding:0 20px 0 28px;height:64px;margin:0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar .topbar-actions{gap:14px}
 .topbar .page-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
 .topbar .page-sub{font-size:12px;color:var(--text3);font-weight:500;margin-top:2px}
 #app{max-width:1400px;margin:0 auto;padding:1.5rem 1.75rem;width:100%}
@@ -578,17 +579,17 @@ async function saveModal(){
     await dbUpsert(record);
     if(editId){prospects=prospects.map(p=>p.id===editId?record:p)}else{prospects=[...prospects,record]}
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
-    closeModal();renderFull();toast('Prospect salvo com sucesso');
+    closeModal();renderFull();toast('Prospecto salvo com sucesso');
   }catch(e){toast('Erro ao salvar: '+e.message,'error')}
 }
 async function deleteProspect(){
   if(!editId)return;
-  if(!confirm('Excluir este prospect?'))return;
+  if(!confirm('Excluir este prospecto?'))return;
   try{
     await dbDelete(editId);
     prospects=prospects.filter(p=>p.id!==editId);
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
-    closeModal();renderFull();toast('Prospect excluído');
+    closeModal();renderFull();toast('Prospecto excluído');
   }catch(e){toast('Erro ao excluir: '+e.message,'error')}
 }
 async function moveToStage(id,newStage){
@@ -657,7 +658,7 @@ function buildICS(p){
     dtLines=`DTSTART;VALUE=DATE:${Y}${M}${D}\r\nDTEND;VALUE=DATE:${fmtD(next)}`;
   }
   const escIcs=s=>String(s||'').replace(/\\/g,'\\\\').replace(/[\n\r]+/g,'\\n').replace(/[,;]/g,m=>'\\'+m);
-  const summary=escIcs(`Reunião — ${p.empresa||p.nome||'Prospect'}`);
+  const summary=escIcs(`Reunião — ${p.empresa||p.nome||'Prospecto'}`);
   const descParts=[];
   if(p.nome)descParts.push(`Contato: ${p.nome}`);
   if(p.contato)descParts.push(`Cargo: ${p.contato}`);
@@ -692,7 +693,7 @@ function openOutlookEvent(){
     startISO=`${Y}-${M}-${D}T09:00:00`;
     endISO=`${Y}-${M}-${D}T10:00:00`;
   }
-  const subject=`Reunião — ${p.empresa||p.nome||'Prospect'}`;
+  const subject=`Reunião — ${p.empresa||p.nome||'Prospecto'}`;
   const bodyParts=[];
   if(p.nome)bodyParts.push(`Contato: ${p.nome}`);
   if(p.contato)bodyParts.push(`Cargo: ${p.contato}`);
@@ -725,7 +726,7 @@ function exportPDF(){
   doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(26,25,23);
   doc.text('CETEM Automação — CRM Prospecção',14,13);
   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(120,113,108);
-  doc.text(`Exportado em ${new Date().toLocaleString('pt-BR')} · ${prospects.length} prospect${prospects.length!==1?'s':''}`,14,19);
+  doc.text(`Exportado em ${new Date().toLocaleString('pt-BR')} · ${prospects.length} prospecto${prospects.length!==1?'s':''}`,14,19);
   const sortedProspects=[...prospects].sort((a,b)=>STAGES.indexOf(a.stage)-STAGES.indexOf(b.stage)||(a.nome||'').localeCompare(b.nome||''));
   const rows=sortedProspects.map(p=>[
     p.nome||'',
@@ -871,7 +872,7 @@ function setPage(p){
 function renderTopbar(){
   const all=prospects;
   const page=window.currentPage||'pipeline';
-  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospect${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
+  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospecto${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
   const cur=titles[page]||titles.pipeline;
   document.getElementById('topbar').innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;min-width:0">
@@ -887,7 +888,7 @@ function renderTopbar(){
         <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button>
       </div>
       <div style="display:flex;gap:2px"><button class="btn ghost" onclick="exportPDF()" title="Exportar PDF">${ICONS.file} PDF</button><button class="btn ghost" onclick="exportCSV()" title="Exportar CSV">${ICONS.download} CSV</button></div>
-      <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo prospect</button>`:''}
+      <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo Prospecto</button>`:''}
     </div>`;
 }
 
@@ -911,7 +912,7 @@ function renderFull(){
       <div class="metric-icon mi-total">${ICONS.users}</div>
       <div class="metric-label">Total</div>
       <div class="metric-value">${all.length}</div>
-      <div class="metric-sub">prospects ativos</div>
+      <div class="metric-sub">prospectos ativos</div>
     </div>
     <div class="metric m-stages">
       <div class="metric-accent"></div>
@@ -938,7 +939,7 @@ function renderFull(){
 
   if(late>0||todayC>0){
     const msgs=[];
-    if(late>0)msgs.push(`${late} prospect${late>1?'s':''} com contato atrasado`);
+    if(late>0)msgs.push(`${late} prospecto${late>1?'s':''} com contato atrasado`);
     if(todayC>0)msgs.push(`${todayC} contato${todayC>1?'s':''} para hoje`);
     html+=`<div class="alert">${ICONS.warn} ${msgs.join(' &nbsp;·&nbsp; ')}</div>`;
   }
@@ -995,7 +996,7 @@ function addStage(){
 }
 function removeStage(i){
   if(editStages.length<=2){toast('Mínimo de 2 etapas','error');return}
-  if(!confirm(`Remover etapa "${editStages[i].name}"? Prospects nessa etapa serão movidos para "${editStages[Math.max(0,i-1)].name}".`))return;
+  if(!confirm(`Remover etapa "${editStages[i].name}"? Prospectos nessa etapa serão movidos para "${editStages[Math.max(0,i-1)].name}".`))return;
   editStages.splice(i,1);settingsDirty=true;renderSettings();
 }
 function resetStages(){
@@ -1060,15 +1061,15 @@ function renderDashboard(){
 
   document.getElementById('app').innerHTML=`
     <div class="metrics">
-      <div class="metric m-total"><div class="metric-accent"></div><div class="metric-icon mi-total">${ICONS.users}</div><div class="metric-label">Total</div><div class="metric-value">${all.length}</div><div class="metric-sub">prospects ativos</div></div>
+      <div class="metric m-total"><div class="metric-accent"></div><div class="metric-icon mi-total">${ICONS.users}</div><div class="metric-label">Total</div><div class="metric-value">${all.length}</div><div class="metric-sub">prospectos ativos</div></div>
       <div class="metric m-pipeline"><div class="metric-accent"></div><div class="metric-icon mi-pipeline">${ICONS.trending}</div><div class="metric-label">Pipeline</div><div class="metric-value sm">${fmt(totalVal)}</div><div class="metric-sub">valor total</div></div>
-      <div class="metric m-stages"><div class="metric-accent"></div><div class="metric-icon mi-stages">${ICONS.layers}</div><div class="metric-label">Ticket médio</div><div class="metric-value sm">${fmt(avgVal)}</div><div class="metric-sub">por prospect</div></div>
+      <div class="metric m-stages"><div class="metric-accent"></div><div class="metric-icon mi-stages">${ICONS.layers}</div><div class="metric-label">Ticket médio</div><div class="metric-value sm">${fmt(avgVal)}</div><div class="metric-sub">por prospecto</div></div>
       <div class="metric m-today"><div class="metric-accent"></div><div class="metric-icon mi-today">${ICONS.clock}</div><div class="metric-label">Conversão</div><div class="metric-value">${convRate}%</div><div class="metric-sub">→ ${wonStage}</div></div>
     </div>
     <div class="dash-grid">
       <div class="chart-card">
         <div class="chart-card-title">Funil de Conversão</div>
-        <div class="chart-card-sub">Quantidade de prospects por etapa</div>
+        <div class="chart-card-sub">Quantidade de prospectos por etapa</div>
         <div class="chart-canvas-wrap"><canvas id="chart-funnel"></canvas></div>
       </div>
       <div class="chart-card">
@@ -1119,7 +1120,7 @@ function renderContent(){
           <span class="col-count">${cards.length}</span>
         </div>`;
       if(!cards.length){
-        html+=`<div class="empty-col">${ICONS.empty}<span>Nenhum prospect</span></div>`;
+        html+=`<div class="empty-col">${ICONS.empty}<span>Nenhum prospecto</span></div>`;
       } else {
         cards.forEach(p=>{
           const ds=dateStatus(p.proximoContato);
@@ -1157,7 +1158,7 @@ function renderContent(){
       </tr></thead><tbody>`;
     if(!vis.length){
       html+=`<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text3)">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${ICONS.empty}<span>Nenhum prospect encontrado</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${ICONS.empty}<span>Nenhum prospecto encontrado</span></div>
       </td></tr>`;
     } else {
       vis.forEach(p=>{
@@ -1203,7 +1204,7 @@ function renderModal(){
   let mhtml=`<div class="modal" onclick="event.stopPropagation()">
     <div class="modal-top">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <h2>${editId?esc(modal.nome)||'Editar prospect':'Novo prospect'}</h2>
+        <h2>${editId?esc(modal.nome)||'Editar prospecto':'Novo Prospecto'}</h2>
         <button class="btn ghost" style="padding:6px" onclick="closeModal()">${ICONS.close}</button>
       </div>
       <div class="tabs">
