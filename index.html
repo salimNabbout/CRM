@@ -85,7 +85,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;line-height:1}
 .btn:hover{background:var(--surface2)}
 .btn:active{transform:scale(0.97)}
-.btn svg{width:14px;height:14px;flex-shrink:0}
+.btn svg{width:14px;height:14px;flex-shrink:0;color:var(--btn-ic,currentColor)}
+.btn.primary svg{color:currentColor}
 .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);box-shadow:0 1px 4px rgba(227,6,19,0.25);font-weight:600}
 .btn.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark);box-shadow:0 3px 10px rgba(227,6,19,0.32)}
 .btn.ghost{border-color:transparent;background:transparent}
@@ -378,7 +379,8 @@ html.dark .s-logo img,html.dark .brand-icon img,html.dark .login-brand img{filte
 .nav-item:hover{background:var(--surface2);color:var(--text)}
 .nav-item.active{background:var(--accent);color:var(--accent-fg);font-weight:600;box-shadow:0 2px 8px rgba(227,6,19,0.25)}
 .nav-item.active:hover{background:var(--accent-dark)}
-.nav-item svg{width:17px;height:17px;flex-shrink:0;stroke-width:2}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;stroke-width:2;color:var(--ic,currentColor)}
+.nav-item.active svg{color:var(--accent-fg)}
 .s-footer{padding:10px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
 .s-user{padding:12px;border-radius:10px;background:var(--surface2);margin-bottom:8px;display:flex;align-items:center;gap:10px}
 .s-user-av{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;text-transform:uppercase}
@@ -893,13 +895,13 @@ function renderSidebar(){
   const ftr=document.getElementById('sidebar-footer');
   if(!nav||!ftr)return;
   const items=[
-    {id:'pipeline',label:'Pipeline',icon:ICONS.layers},
-    {id:'dashboard',label:'Dashboard',icon:ICONS.trending},
-    {id:'agenda',label:'Agenda',icon:ICONS.calendar},
-    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers}
+    {id:'pipeline',label:'Pipeline',icon:ICONS.layers,color:'#2563EB'},
+    {id:'dashboard',label:'Dashboard',icon:ICONS.trending,color:'#16A34A'},
+    {id:'agenda',label:'Agenda',icon:ICONS.calendar,color:'#7C3AED'},
+    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#78716C'}
   ];
   nav.innerHTML=`<div class="s-section">Navegação</div>`+
-    items.map(it=>`<button class="nav-item${(window.currentPage||'pipeline')===it.id?' active':''}" onclick="setPage('${it.id}')">${it.icon}<span>${it.label}</span></button>`).join('');
+    items.map(it=>`<button class="nav-item${(window.currentPage||'pipeline')===it.id?' active':''}" onclick="setPage('${it.id}')" style="--ic:${it.color}">${it.icon}<span>${it.label}</span></button>`).join('');
   const email=session?.user?.email||'';
   const initial=(email[0]||'?').toUpperCase();
   const isDark=document.documentElement.classList.contains('dark');
@@ -911,9 +913,9 @@ function renderSidebar(){
         <div class="s-user-email">${esc(email)}</div>
       </div>
     </div>
-    <button class="nav-item" onclick="toggleTheme()">${isDark?ICONS.sun:ICONS.moon}<span>Tema ${isDark?'claro':'escuro'}</span></button>
-    <button class="nav-item" onclick="openProfile()">${ICONS.user}<span>Meu perfil</span></button>
-    <button class="nav-item" onclick="doLogout()" style="color:var(--red)">${ICONS.logout}<span>Sair</span></button>`;
+    <button class="nav-item" onclick="toggleTheme()" style="--ic:${isDark?'#F59E0B':'#6366F1'}">${isDark?ICONS.sun:ICONS.moon}<span>Tema ${isDark?'claro':'escuro'}</span></button>
+    <button class="nav-item" onclick="openProfile()" style="--ic:#0EA5E9">${ICONS.user}<span>Meu perfil</span></button>
+    <button class="nav-item" onclick="doLogout()" style="color:var(--red);--ic:var(--red)">${ICONS.logout}<span>Sair</span></button>`;
 }
 function setPage(p){
   if(window.currentPage==='settings'&&p!=='settings'&&settingsDirty){
@@ -942,7 +944,7 @@ function renderTopbar(){
         <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">${ICONS.grid} Kanban</button>
         <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button>
       </div>
-      <div style="display:flex;gap:2px"><button class="btn ghost" onclick="exportPDF()" title="Exportar PDF">${ICONS.file} PDF</button><button class="btn ghost" onclick="exportCSV()" title="Exportar CSV">${ICONS.download} CSV</button></div>
+      <div style="display:flex;gap:2px"><button class="btn ghost" onclick="exportPDF()" title="Exportar PDF" style="--btn-ic:#DC2626">${ICONS.file} PDF</button><button class="btn ghost" onclick="exportCSV()" title="Exportar CSV" style="--btn-ic:#16A34A">${ICONS.download} CSV</button></div>
       <button class="btn primary" onclick="openNew()">${ICONS.plus} Nova Prospecção</button>`:''}
     </div>`;
 }
@@ -1440,7 +1442,7 @@ function renderModal(){
   mhtml+=`</div>
     <div class="modal-footer">
       ${editId?`<button class="btn del-btn" onclick="deleteProspect()">${ICONS.trash} Excluir</button>`:''}
-      ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Abre o Outlook com o evento já preenchido">${ICONS.calendar} Agendar no Outlook</button>`:''}
+      ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Abre o Outlook com o evento já preenchido" style="--btn-ic:#0078D4">${ICONS.calendar} Agendar no Outlook</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveModal()">Salvar</button>
     </div>
