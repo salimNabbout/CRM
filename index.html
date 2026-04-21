@@ -133,7 +133,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .col-contato{border-top:3px solid var(--amber)}
 .col-quali{border-top:3px solid var(--green)}
 .col-reuniao{border-top:3px solid var(--purple)}
-.col-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.col-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);position:relative;cursor:help}
+.col-head[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 10px);left:0;right:0;background:var(--text);color:var(--bg);padding:9px 12px;border-radius:10px;font-size:12px;font-weight:500;z-index:80;box-shadow:var(--shadow-md);line-height:1.4;pointer-events:none;white-space:normal}
+.col-head[data-tip]:hover::before{content:'';position:absolute;top:calc(100% + 3px);left:18px;border:5px solid transparent;border-bottom-color:var(--text);z-index:81;pointer-events:none}
+.col-head[data-tip=""]:hover::after,.col-head[data-tip=""]:hover::before{display:none}
 .col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .dot-lead{background:var(--blue)}
 .dot-contato{background:var(--amber)}
@@ -392,10 +395,10 @@ html.dark .s-logo img,html.dark .brand-icon img,html.dark .login-brand img{filte
 
 <script>
 const DEFAULT_STAGES=[
-  {name:'Lead',short:'Lead',color:'#2563EB'},
-  {name:'Contato feito',short:'Contato',color:'#D97706'},
-  {name:'Qualificação',short:'Qualif.',color:'#16A34A'},
-  {name:'Reunião Agendada',short:'Reunião',color:'#7C3AED'}
+  {name:'Lead',short:'Lead',color:'#2563EB',desc:'Potencial Cliente a ser Trabalhado'},
+  {name:'Contato feito',short:'Contato',color:'#D97706',desc:'Aceitou o Convite no Sales Navigation'},
+  {name:'Qualificação',short:'Qualif.',color:'#16A34A',desc:'Aceitou Agendar uma Reunião'},
+  {name:'Reunião Agendada',short:'Reunião',color:'#7C3AED',desc:'Missão Cumprida pelo Gerente de Relacionamento'}
 ];
 let stagesConfig=JSON.parse(JSON.stringify(DEFAULT_STAGES));
 let STAGES=stagesConfig.map(s=>s.name);
@@ -403,6 +406,7 @@ function refreshStages(){STAGES=stagesConfig.map(s=>s.name)}
 function stageObj(name){return stagesConfig.find(s=>s.name===name)||DEFAULT_STAGES[0]}
 function stageColor(name){return stageObj(name).color}
 function stageShort(name){return (stagesConfig.find(s=>s.name===name)||{short:name}).short}
+function stageDesc(name){const s=stagesConfig.find(x=>x.name===name);if(s&&s.desc)return s.desc;const d=DEFAULT_STAGES.find(x=>x.name===name);return d?d.desc:''}
 function hex2rgba(hex,a){if(!hex||hex[0]!=='#')return`rgba(120,113,108,${a})`;const n=parseInt(hex.slice(1),16);return`rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`}
 function badgeStyle(name){const c=stageColor(name);return`background:${hex2rgba(c,0.12)};color:${c}`}
 function dotStyle(name){return`background:${stageColor(name)}`}
@@ -972,8 +976,13 @@ function renderSettings(){
              ondragover="event.preventDefault()" ondrop="stageDrop(event,${i})">
           <div class="stage-handle" title="Arraste para reordenar">⋮⋮</div>
           <label class="stage-color" style="background:${esc(s.color)}" title="Trocar cor"><input type="color" value="${esc(s.color)}" onchange="updateStageField(${i},'color',this.value)"></label>
-          <input type="text" class="s-name" placeholder="Nome da etapa" value="${esc(s.name)}" oninput="updateStageField(${i},'name',this.value)">
-          <input type="text" class="s-short" placeholder="Abrev." value="${esc(s.short)}" oninput="updateStageField(${i},'short',this.value)" maxlength="14">
+          <div style="flex:3;display:flex;flex-direction:column;gap:6px;min-width:200px">
+            <div style="display:flex;gap:6px">
+              <input type="text" class="s-name" placeholder="Nome da etapa" value="${esc(s.name)}" oninput="updateStageField(${i},'name',this.value)" style="flex:2">
+              <input type="text" class="s-short" placeholder="Abrev." value="${esc(s.short)}" oninput="updateStageField(${i},'short',this.value)" maxlength="14" style="flex:1">
+            </div>
+            <input type="text" placeholder="Descrição (aparece no tooltip da coluna)" value="${esc(s.desc||'')}" oninput="updateStageField(${i},'desc',this.value)" style="width:100%">
+          </div>
           ${editStages.length>2?`<button class="s-del" onclick="removeStage(${i})" title="Remover etapa">${ICONS.trash}</button>`:''}
         </div>`).join('')}</div>
       <div class="settings-actions">
@@ -991,7 +1000,7 @@ function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=tr
 function addStage(){
   const palette=['#0EA5E9','#F97316','#10B981','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1'];
   const color=palette[editStages.length%palette.length];
-  editStages.push({name:'Nova etapa',short:'Nova',color});
+  editStages.push({name:'Nova etapa',short:'Nova',color,desc:''});
   settingsDirty=true;renderSettings();
 }
 function removeStage(i){
@@ -1114,7 +1123,7 @@ function renderContent(){
     STAGES.forEach((stage,si)=>{
       const cards=vis.filter(p=>p.stage===stage);
       html+=`<div class="col" style="border-top:3px solid ${stageColor(stage)}" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="dropOnCol(event,'${stage.replace(/'/g,"\\'")}')">
-        <div class="col-head">
+        <div class="col-head" data-tip="${esc(stageDesc(stage))}">
           <span class="col-dot" style="${dotStyle(stage)}"></span>
           <span class="col-name">${esc(stage)}</span>
           <span class="col-count">${cards.length}</span>
