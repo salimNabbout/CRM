@@ -567,6 +567,42 @@ async function saveStagesConfig(){
   localStorage.setItem('crm_stages_v1',JSON.stringify(stagesConfig));
 }
 const DEFAULT_ORIGENS=['LinkedIn','Indicação','Cold Email','Cold Call','Site','Evento','WhatsApp','Outro'];
+const TEMPLATE_TIPOS=['WhatsApp','E-mail','LinkedIn','Script ligação'];
+const DEFAULT_TEMPLATES=[
+  {id:'tpl-wa-1',nome:'WhatsApp — Abordagem inicial',tipo:'WhatsApp',texto:'Olá {{nome}}, tudo bem?\n\nAqui é {{seuNome}} da CETEM Automação. Vimos que a {{empresa}} atua com processos industriais e trabalhamos com automação, Data Science e IA industrial que têm gerado ganhos de eficiência para empresas do seu segmento.\n\nPosso apresentar em 15 minutos o que fazemos? Tem alguma data na sua agenda?'},
+  {id:'tpl-wa-2',nome:'WhatsApp — Follow-up após e-mail',tipo:'WhatsApp',texto:'Oi {{nome}}, tudo certo?\n\nEnviei um e-mail há alguns dias sobre automação industrial e não sei se chegou até você. Vou deixar meu contato aqui para facilitar: {{seuNome}} / CETEM Automação.\n\nCaso prefira, posso adiantar o material por aqui mesmo. O que acha?'},
+  {id:'tpl-em-1',nome:'E-mail — Cold inicial',tipo:'E-mail',texto:'Assunto: CETEM Automação — oportunidade para a {{empresa}}\n\nOlá {{nome}},\n\nMeu nome é {{seuNome}} e represento a CETEM Automação. Somos uma empresa com foco em Automação Industrial, Data Science e IA aplicada ao chão de fábrica.\n\nProjetos recentes geraram para nossos clientes:\n• Redução de paradas não programadas\n• Aumento de OEE\n• Visibilidade de dados para tomada de decisão\n\nPosso propor uma reunião rápida (15 min) para entender o momento da {{empresa}} e verificar se faz sentido seguirmos a conversa?\n\nAbraço,\n{{seuNome}}\nCETEM Automação · cetemrj.com.br'},
+  {id:'tpl-em-2',nome:'E-mail — Follow-up 1 (sem resposta)',tipo:'E-mail',texto:'Assunto: Retomando contato — CETEM Automação\n\nOlá {{nome}},\n\nAproveito para retomar o contato sobre o material que enviei na semana passada. Sei que a rotina costuma ser cheia, por isso vou ser direto: consigo 15 minutos da sua agenda nas próximas duas semanas para apresentar como a CETEM pode apoiar a {{empresa}}?\n\nCaso o tema não seja prioridade agora, me avise — não quero atrapalhar.\n\nAbraço,\n{{seuNome}}'},
+  {id:'tpl-em-3',nome:'E-mail — Breakup (última tentativa)',tipo:'E-mail',texto:'Assunto: Último contato — CETEM Automação\n\nOlá {{nome}},\n\nEste é meu último e-mail para não me tornar insistente. Entendo que o tema de automação pode não ser prioridade da {{empresa}} neste momento.\n\nDeixo minha porta aberta para quando fizer sentido. Caso queira retomar em algum momento, basta responder este e-mail.\n\nDesejo sucesso nos seus projetos.\n\n{{seuNome}}\nCETEM Automação'},
+  {id:'tpl-li-1',nome:'LinkedIn — Convite de conexão',tipo:'LinkedIn',texto:'Olá {{nome}}, tudo bem? Trabalho com automação industrial na CETEM e acompanho os projetos da {{empresa}}. Adoraria conectar por aqui para trocar ideias sobre o setor. Abraço, {{seuNome}}'},
+  {id:'tpl-li-2',nome:'LinkedIn — Mensagem pós-conexão',tipo:'LinkedIn',texto:'Oi {{nome}}, obrigado por aceitar a conexão!\n\nSó me apresentando: sou {{seuNome}} da CETEM Automação. Entregamos soluções de automação, Data Science e IA industrial.\n\nSe fizer sentido, posso marcar uma conversa rápida para trocarmos experiências sobre o que a {{empresa}} vem buscando na área. O que acha?'},
+  {id:'tpl-sc-1',nome:'Script — Cold call inicial',tipo:'Script ligação',texto:'Olá {{nome}}, boa tarde! Aqui é {{seuNome}} da CETEM Automação. Espero não estar ligando em momento inoportuno.\n\nDirigindo ao assunto: trabalhamos com automação industrial, Data Science e IA para chão de fábrica. Já apoiamos empresas como [citar cases] a reduzir paradas não programadas.\n\nPor isso estou entrando em contato com a {{empresa}}. Queria entender se este tema está no radar de vocês e, em caso positivo, propor uma apresentação de 15 minutos.\n\nO que acha?\n\n[Se NÃO: Sem problema. Posso anotar para retomar contato daqui a 3 meses?]\n[Se SIM: Ótimo! Que tal {{dia próxima semana}}?]'}
+];
+let templatesConfig=[...DEFAULT_TEMPLATES];
+async function loadTemplatesConfig(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.templates&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();if(Array.isArray(data[0]?.value)&&data[0].value.length)templatesConfig=data[0].value}
+  }catch{}
+}
+async function saveTemplatesConfig(){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:'templates',value:templatesConfig,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
+function fillTemplate(txt,p){
+  const seuNome=(currentUser()||'').split('@')[0];
+  return String(txt||'').replace(/\{\{nome\}\}/g,p.nome||'').replace(/\{\{empresa\}\}/g,p.empresa||'').replace(/\{\{cargo\}\}/g,p.contato||'').replace(/\{\{telefone\}\}/g,p.telefone||'').replace(/\{\{email\}\}/g,p.email||'').replace(/\{\{seuNome\}\}/g,seuNome);
+}
+function waLink(phone,text){
+  const digits=String(phone||'').replace(/\D/g,'');
+  if(!digits)return null;
+  const formatted=digits.startsWith('55')?digits:(digits.length<=11?'55'+digits:digits);
+  return `https://wa.me/${formatted}?text=${encodeURIComponent(text)}`;
+}
 let origensConfig=[...DEFAULT_ORIGENS];
 async function loadOrigensConfig(){
   try{
@@ -625,6 +661,64 @@ async function doLogin(ev){
   session=data.session;
   showApp();
   return false;
+}
+function openTemplatePicker(tipo){
+  const existing=document.getElementById('tpl-menu');
+  if(existing)existing.remove();
+  const tpls=templatesConfig.filter(t=>t.tipo===tipo);
+  const ov=document.createElement('div');
+  ov.id='tpl-menu';ov.className='overlay';ov.style.zIndex='400';
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()});
+  ov.innerHTML=`<div class="modal" style="width:480px;max-height:85vh" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h2>Templates · ${esc(tipo)}</h2>
+        <button class="btn ghost" style="padding:6px" onclick="document.getElementById('tpl-menu').remove()">${ICONS.close}</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      ${tpls.length?tpls.map(t=>`
+        <div onclick="sendTemplate('${t.id}')" style="padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:var(--surface)"
+             onmouseover="this.style.borderColor='var(--accent)';this.style.boxShadow='var(--shadow-md)'"
+             onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow=''">
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--text)">${esc(t.nome)}</div>
+          <div style="font-size:11.5px;color:var(--text3);line-height:1.5;max-height:80px;overflow:hidden;white-space:pre-wrap">${esc(t.texto.slice(0,260))}${t.texto.length>260?'...':''}</div>
+        </div>`).join(''):'<div class="empty" style="padding:2rem"><span>Nenhum template desse tipo. Adicione em <b>Configurações</b>.</span></div>'}
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function sendTemplate(tplId){
+  const tpl=templatesConfig.find(t=>t.id===tplId);
+  if(!tpl||!modal)return;
+  const text=fillTemplate(tpl.texto,modal);
+  document.getElementById('tpl-menu')?.remove();
+  if(tpl.tipo==='WhatsApp'){
+    const link=waLink(modal.telefone,text);
+    if(!link){toast('Telefone não preenchido','error');return}
+    window.open(link,'_blank','noopener');
+    await logInteracao('Ligação','Enviou WhatsApp: '+tpl.nome);
+  } else if(tpl.tipo==='E-mail'){
+    if(!modal.email){toast('E-mail não preenchido','error');return}
+    let subject='',body=text;
+    const mt=text.match(/^Assunto:\s*([^\n]+)\n+([\s\S]*)$/);
+    if(mt){subject=mt[1].trim();body=mt[2].trim()}
+    const link=`mailto:${encodeURIComponent(modal.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href=link;
+    await logInteracao('E-mail','Enviou e-mail: '+tpl.nome);
+  } else if(tpl.tipo==='LinkedIn'){
+    try{await navigator.clipboard.writeText(text);toast('Mensagem copiada — cole no LinkedIn')}
+    catch{toast('Copie manualmente o texto','error')}
+    await logInteracao('Nota','Mensagem LinkedIn enviada: '+tpl.nome);
+  } else {
+    try{await navigator.clipboard.writeText(text);toast('Script copiado')}catch{}
+  }
+}
+async function logInteracao(tipo,texto){
+  if(!editId)return;
+  const entry={id:uid(),data:today(),hora:nowHHMM(),tipo,texto,auto:true,user:currentUser()};
+  modal.historico=[entry,...(modal.historico||[])];
+  try{await dbPatch(editId,{historico:modal.historico});prospects=prospects.map(p=>p.id===editId?{...p,historico:modal.historico}:p);localStorage.setItem('crm_v2',JSON.stringify(prospects))}catch{}
 }
 function openProfile(){
   const email=session?.user?.email||'';
@@ -955,7 +1049,11 @@ const ICONS={
   user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
   settings:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   file:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
-  chart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>`
+  chart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>`,
+  wa:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`,
+  mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  linkedin:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`,
+  phone:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
 };
 
 function toast(msg,type='success'){
@@ -1640,6 +1738,30 @@ function renderSettings(){
     </div>
 
     <div class="settings-card" style="margin-top:18px">
+      <h3>Templates de Mensagem</h3>
+      <div class="h-sub">Variáveis disponíveis: <code>{{nome}}</code> <code>{{empresa}}</code> <code>{{cargo}}</code> <code>{{telefone}}</code> <code>{{email}}</code> <code>{{seuNome}}</code></div>
+      ${templatesConfig.map((t,i)=>`
+        <div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;background:var(--surface)">
+          <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+            <input type="text" value="${esc(t.nome)}" onchange="templatesConfig[${i}].nome=this.value" placeholder="Nome do template" style="flex:2;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12.5px;background:transparent;color:var(--text)">
+            <select onchange="templatesConfig[${i}].tipo=this.value" style="flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12.5px;background:transparent;color:var(--text)">
+              ${TEMPLATE_TIPOS.map(tp=>`<option value="${tp}"${t.tipo===tp?' selected':''}>${tp}</option>`).join('')}
+            </select>
+            <button onclick="removeTemplate(${i})" style="padding:6px 9px;background:transparent;border:1px solid var(--red-mid);color:var(--red);border-radius:var(--radius);cursor:pointer" title="Remover template">${ICONS.trash}</button>
+          </div>
+          <textarea onchange="templatesConfig[${i}].texto=this.value" placeholder="Texto do template com variáveis" style="width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12.5px;font-family:inherit;background:transparent;color:var(--text);min-height:70px;resize:vertical">${esc(t.texto)}</textarea>
+        </div>
+      `).join('')}
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:10px">
+        <button class="btn" onclick="addTemplate()">${ICONS.plus} Novo template</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="resetTemplates()">Restaurar padrão</button>
+          <button class="btn primary" onclick="commitTemplates()">Salvar templates</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:18px">
       <h3>Metas Mensais</h3>
       <div class="h-sub">Objetivos mensais acompanhados automaticamente na página Análise</div>
       <div class="modal-row">
@@ -1670,6 +1792,23 @@ function removeOrigem(i){
 }
 async function commitOrigens(){
   try{await saveOrigensConfig();toast('Origens salvas');renderSettings()}catch(e){toast('Erro ao salvar origens: '+e.message,'error')}
+}
+function addTemplate(){
+  templatesConfig.push({id:'tpl-'+uid(),nome:'Novo template',tipo:'WhatsApp',texto:''});
+  renderSettings();
+}
+function removeTemplate(i){
+  if(!confirm(`Remover template "${templatesConfig[i].nome}"?`))return;
+  templatesConfig.splice(i,1);
+  renderSettings();
+}
+function resetTemplates(){
+  if(!confirm('Restaurar templates padrão? Seus templates customizados serão perdidos.'))return;
+  templatesConfig=JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  renderSettings();
+}
+async function commitTemplates(){
+  try{await saveTemplatesConfig();toast('Templates salvos')}catch(e){toast('Erro ao salvar templates: '+e.message,'error')}
 }
 function updateStageField(i,field,val){editStages[i][field]=val;settingsDirty=true;renderSettings()}
 function stageFieldTyping(i,field,val){editStages[i][field]=val;settingsDirty=true}
@@ -1991,6 +2130,9 @@ function renderModal(){
   mhtml+=`</div>
     <div class="modal-footer">
       ${editId?`<button class="btn del-btn" onclick="deleteProspect()">${ICONS.trash} Excluir</button>`:''}
+      ${editId?`<button class="btn" onclick="openTemplatePicker('WhatsApp')" title="Enviar WhatsApp com template" style="--btn-ic:#25D366">${ICONS.wa}</button>`:''}
+      ${editId?`<button class="btn" onclick="openTemplatePicker('E-mail')" title="Enviar e-mail com template" style="--btn-ic:#EA4335">${ICONS.mail}</button>`:''}
+      ${editId?`<button class="btn" onclick="openTemplatePicker('LinkedIn')" title="Copiar mensagem LinkedIn" style="--btn-ic:#0A66C2">${ICONS.linkedin}</button>`:''}
       ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Abre o Outlook com o evento já preenchido" style="--btn-ic:#0078D4">${ICONS.calendar} Agendar no Outlook</button>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveModal()">Salvar</button>
@@ -2003,6 +2145,7 @@ async function init(){
   document.getElementById('app').innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:40vh;gap:10px;color:var(--text3);font-size:14px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Carregando dados...</div>`;
   await loadStagesConfig();
   await loadOrigensConfig();
+  await loadTemplatesConfig();
   await loadGoalsConfig();
   prospects=await dbFetch();
   renderFull();
