@@ -6,6 +6,7 @@
 <title>CRM — Prospecção</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -271,6 +272,23 @@ tbody tr:hover td{background:var(--surface2)}
 #login-screen .field{margin-bottom:14px}
 #login-screen .btn.primary{width:100%;justify-content:center;padding:11px}
 .logout-btn{padding:7px 10px}
+
+/* === V2: Dashboard === */
+.dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:1.25rem}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px;box-shadow:var(--shadow)}
+.chart-card-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.chart-card-sub{font-size:12px;color:var(--text3);margin-bottom:14px}
+.chart-canvas-wrap{position:relative;height:260px}
+.upcoming-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--radius);cursor:pointer;transition:background 0.12s;border:1px solid transparent}
+.upcoming-row:hover{background:var(--surface2);border-color:var(--border)}
+.upcoming-row+.upcoming-row{margin-top:4px}
+.upcoming-when{font-size:11.5px;font-weight:600;background:var(--surface2);padding:6px 10px;border-radius:8px;min-width:74px;text-align:center;color:var(--text);flex-shrink:0}
+.upcoming-when.late{background:var(--red-bg);color:var(--red)}
+.upcoming-when.today{background:var(--amber-bg);color:var(--amber)}
+.upcoming-info{flex:1;min-width:0}
+.upcoming-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upcoming-empresa{font-size:11.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* === V2: Sidebar layout === */
 body{display:block}
@@ -764,7 +782,7 @@ function renderFull(){
   renderTopbar();
   const page=window.currentPage||'pipeline';
   const app=document.getElementById('app');
-  if(page==='dashboard'){app.innerHTML=`<div class="empty" style="padding:5rem 1rem"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span style="margin-top:14px;font-size:14px">Dashboard com gráficos chega na Fase 3</span></div>`;return}
+  if(page==='dashboard'){renderDashboard();return}
   if(page==='settings'){app.innerHTML=`<div class="empty" style="padding:5rem 1rem"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6"/></svg><span style="margin-top:14px;font-size:14px">Configurações de pipeline chegam na Fase 4</span></div>`;return}
   const all=prospects;
   const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
@@ -823,6 +841,69 @@ function renderFull(){
 
   app.innerHTML=html;
   renderContent();
+}
+
+let dashCharts=[];
+function renderDashboard(){
+  const all=prospects;
+  const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const avgVal=all.length?totalVal/all.length:0;
+  const wonStage=STAGES[STAGES.length-1];
+  const wonCount=all.filter(p=>p.stage===wonStage).length;
+  const convRate=all.length?Math.round(wonCount/all.length*100):0;
+  const stageCounts=STAGES.map(s=>all.filter(p=>p.stage===s).length);
+  const stageVals=STAGES.map(s=>all.filter(p=>p.stage===s).reduce((sum,p)=>sum+(Number(p.valor)||0),0));
+  const stageColors=['#2563EB','#D97706','#16A34A','#7C3AED'];
+  const t=today();
+  const in14=new Date(Date.now()+14*86400000).toISOString().slice(0,10);
+  const upcoming=all.filter(p=>p.proximoContato&&p.proximoContato<=in14).sort((a,b)=>a.proximoContato.localeCompare(b.proximoContato));
+  const isDark=document.documentElement.classList.contains('dark');
+  const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+  const tickColor=isDark?'#9C968F':'#78716C';
+
+  document.getElementById('app').innerHTML=`
+    <div class="metrics">
+      <div class="metric m-total"><div class="metric-accent"></div><div class="metric-icon mi-total">${ICONS.users}</div><div class="metric-label">Total</div><div class="metric-value">${all.length}</div><div class="metric-sub">prospects ativos</div></div>
+      <div class="metric m-pipeline"><div class="metric-accent"></div><div class="metric-icon mi-pipeline">${ICONS.trending}</div><div class="metric-label">Pipeline</div><div class="metric-value sm">${fmt(totalVal)}</div><div class="metric-sub">valor total</div></div>
+      <div class="metric m-stages"><div class="metric-accent"></div><div class="metric-icon mi-stages">${ICONS.layers}</div><div class="metric-label">Ticket médio</div><div class="metric-value sm">${fmt(avgVal)}</div><div class="metric-sub">por prospect</div></div>
+      <div class="metric m-today"><div class="metric-accent"></div><div class="metric-icon mi-today">${ICONS.clock}</div><div class="metric-label">Conversão</div><div class="metric-value">${convRate}%</div><div class="metric-sub">→ ${wonStage}</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Funil de Conversão</div>
+        <div class="chart-card-sub">Quantidade de prospects por etapa</div>
+        <div class="chart-canvas-wrap"><canvas id="chart-funnel"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Pipeline por Etapa</div>
+        <div class="chart-card-sub">Valor estimado em R$ acumulado</div>
+        <div class="chart-canvas-wrap"><canvas id="chart-value"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-top:14px">
+      <div class="chart-card-title">Próximos Contatos</div>
+      <div class="chart-card-sub">Atrasados, hoje e próximos 14 dias</div>
+      <div id="upcoming-list" style="margin-top:6px">${upcoming.length?upcoming.map(p=>{
+        const ds=dateStatus(p.proximoContato);
+        const lbl=ds==='late'?'Atrasado':(ds==='today'?'Hoje':fmtDate(p.proximoContato));
+        return `<div class="upcoming-row" onclick="openEdit('${p.id}')">
+          <div class="upcoming-when ${ds==='late'?'late':(ds==='today'?'today':'')}">${lbl}${p.horaContato?'<br>'+p.horaContato:''}</div>
+          <div class="upcoming-info"><div class="upcoming-name">${esc(p.nome)}</div><div class="upcoming-empresa">${esc(p.empresa)||'—'}</div></div>
+          <span class="badge ${SBADGE[p.stage]}">${p.stage}</span>
+        </div>`;
+      }).join(''):'<div class="empty" style="padding:2rem"><span>Nenhum contato agendado nos próximos 14 dias</span></div>'}</div>
+    </div>
+  `;
+
+  dashCharts.forEach(c=>{try{c.destroy()}catch{}});dashCharts=[];
+  if(typeof Chart==='undefined')return;
+  const commonOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1A1917',padding:10,cornerRadius:8}},scales:{x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:11}}},y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:11}},beginAtZero:true}}};
+  setTimeout(()=>{
+    const c1=document.getElementById('chart-funnel');
+    if(c1)dashCharts.push(new Chart(c1,{type:'bar',data:{labels:STAGES,datasets:[{data:stageCounts,backgroundColor:stageColors,borderRadius:8,barThickness:42}]},options:{...commonOpts,indexAxis:'y',scales:{x:{...commonOpts.scales.x,ticks:{...commonOpts.scales.x.ticks,precision:0}},y:{...commonOpts.scales.y,grid:{display:false}}}}}));
+    const c2=document.getElementById('chart-value');
+    if(c2)dashCharts.push(new Chart(c2,{type:'bar',data:{labels:STAGES.map(s=>SSHORT[s]),datasets:[{data:stageVals,backgroundColor:stageColors,borderRadius:8,barThickness:42}]},options:{...commonOpts,scales:{x:{...commonOpts.scales.x,grid:{display:false}},y:{...commonOpts.scales.y,ticks:{...commonOpts.scales.y.ticks,callback:v=>'R$ '+(v>=1000?(v/1000).toFixed(0)+'k':v)}}}}}));
+  },30);
 }
 
 function renderContent(){
