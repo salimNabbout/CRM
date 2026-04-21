@@ -618,7 +618,35 @@ async function saveOrigensConfig(){
   });
   if(!r.ok)throw new Error(await r.text());
 }
-let goalsConfig={leads_month:20,conv_month:5,inter_month:50};
+let goalsConfig={
+  leads_day:2,inter_day:5,
+  leads_week:10,conv_week:2,inter_week:25,
+  leads_month:20,conv_month:5,inter_month:50
+};
+function weekStartYmd(){
+  const d=new Date();
+  const day=d.getDay();
+  const diff=day===0?6:day-1; // segunda=0
+  d.setDate(d.getDate()-diff);d.setHours(0,0,0,0);
+  return ymd(d);
+}
+function weekEndYmd(){
+  const d=new Date();
+  const day=d.getDay();
+  const diff=day===0?0:7-day;
+  d.setDate(d.getDate()+diff);d.setHours(23,59,59,999);
+  return ymd(d);
+}
+function computePeriodTotals(startYmd,endYmd){
+  const evs=allEvents().filter(e=>e.data&&e.data>=startYmd&&e.data<=endYmd);
+  const last=LAST_STAGE();
+  return {
+    leads:evs.filter(e=>e.tipo==='Criação').length,
+    movs:evs.filter(e=>e.tipo==='Movimentação').length,
+    inter:evs.filter(e=>['Nota','Ligação','E-mail','Reunião'].includes(e.tipo)).length,
+    conv:evs.filter(e=>e.tipo==='Movimentação'&&e.texto&&e.texto.endsWith(`→ ${last}`)).length
+  };
+}
 async function loadGoalsConfig(){
   try{
     const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.goals&select=value`,{headers:sbHdr()});
@@ -1767,14 +1795,30 @@ function renderSettings(){
     </div>
 
     <div class="settings-card" style="margin-top:18px">
-      <h3>Metas Mensais</h3>
-      <div class="h-sub">Objetivos mensais acompanhados automaticamente na página Análise</div>
+      <h3>Metas de Prospecção</h3>
+      <div class="h-sub">Acompanhadas no Dashboard (diária · semanal) e na Análise (mensal)</div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin:14px 0 8px">Diária</div>
+      <div class="modal-row">
+        <div class="field"><label>Novos Leads / dia</label><input type="number" value="${goalsConfig.leads_day}" oninput="goalsConfig.leads_day=Number(this.value)||0" min="0"></div>
+        <div class="field"><label>Interações / dia</label><input type="number" value="${goalsConfig.inter_day}" oninput="goalsConfig.inter_day=Number(this.value)||0" min="0"></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin:10px 0 8px">Semanal</div>
+      <div class="modal-row">
+        <div class="field"><label>Novos Leads / semana</label><input type="number" value="${goalsConfig.leads_week}" oninput="goalsConfig.leads_week=Number(this.value)||0" min="0"></div>
+        <div class="field"><label>Conversões / semana</label><input type="number" value="${goalsConfig.conv_week}" oninput="goalsConfig.conv_week=Number(this.value)||0" min="0"></div>
+      </div>
+      <div class="field"><label>Interações / semana</label><input type="number" value="${goalsConfig.inter_week}" oninput="goalsConfig.inter_week=Number(this.value)||0" min="0"></div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin:10px 0 8px">Mensal</div>
       <div class="modal-row">
         <div class="field"><label>Novos Leads / mês</label><input type="number" value="${goalsConfig.leads_month}" oninput="goalsConfig.leads_month=Number(this.value)||0" min="0"></div>
         <div class="field"><label>Conversões / mês</label><input type="number" value="${goalsConfig.conv_month}" oninput="goalsConfig.conv_month=Number(this.value)||0" min="0"></div>
       </div>
-      <div class="field"><label>Interações / mês (notas · ligações · e-mails · reuniões)</label><input type="number" value="${goalsConfig.inter_month}" oninput="goalsConfig.inter_month=Number(this.value)||0" min="0"></div>
-      <div style="display:flex;justify-content:flex-end;margin-top:4px">
+      <div class="field"><label>Interações / mês</label><input type="number" value="${goalsConfig.inter_month}" oninput="goalsConfig.inter_month=Number(this.value)||0" min="0"></div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
         <button class="btn primary" onclick="commitGoals()">Salvar metas</button>
       </div>
     </div>`;
@@ -1920,6 +1964,41 @@ function renderDashboard(){
       <div class="metric m-stages"><div class="metric-accent"></div><div class="metric-icon mi-stages">${ICONS.layers}</div><div class="metric-label">Ticket médio</div><div class="metric-value sm">${fmt(avgVal)}</div><div class="metric-sub">por prospecto</div></div>
       <div class="metric m-today"><div class="metric-accent"></div><div class="metric-icon mi-today">${ICONS.clock}</div><div class="metric-label">Conversão</div><div class="metric-value">${convRate}%</div><div class="metric-sub">→ ${wonStage}</div></div>
     </div>
+    ${(()=>{
+      const tYmd=today();
+      const dayTot=computePeriodTotals(tYmd,tYmd);
+      const wkStart=weekStartYmd(),wkEnd=weekEndYmd();
+      const wkTot=computePeriodTotals(wkStart,wkEnd);
+      const mStart=monthKey(new Date())+'-01',mEnd=today();
+      const mTot=computePeriodTotals(mStart,mEnd);
+      const barColor=(cur,goal)=>cur>=goal?'over':(cur/goal<0.5?'low':'');
+      const renderBar=(label,cur,goal,ca,cb)=>{
+        const pct=goal?Math.min(100,Math.round(cur/goal*100)):0;
+        return `<div class="goal-row" style="--gc-a:${ca};--gc-b:${cb};padding:7px 0">
+          <div class="goal-label" style="min-width:88px;font-size:11.5px">${label}</div>
+          <div class="goal-bar-wrap" style="height:10px"><div class="goal-bar ${barColor(cur,goal)}" style="width:${pct}%"></div></div>
+          <div class="goal-val" style="min-width:84px;font-size:11.5px">${cur} / ${goal}<span class="goal-pct">${pct}%</span></div>
+        </div>`;
+      };
+      const wkLabel=`${wkStart.split('-').reverse().slice(0,2).join('/')} — ${wkEnd.split('-').reverse().slice(0,2).join('/')}`;
+      return `<div class="chart-card" style="margin-top:14px">
+        <div class="chart-card-title">Ritmo de prospecção</div>
+        <div class="chart-card-sub">Progresso contra suas metas · edite em <b>Configurações</b></div>
+        <div class="dash-grid" style="margin-top:14px;gap:18px">
+          <div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;display:flex;align-items:center;gap:8px">Hoje <span style="background:var(--surface2);color:var(--text3);padding:2px 9px;border-radius:99px;font-size:10.5px">${tYmd.split('-').reverse().slice(0,2).join('/')}</span></div>
+            ${renderBar('Novos Leads',dayTot.leads,goalsConfig.leads_day,'#E30613','#FF6B7A')}
+            ${renderBar('Interações',dayTot.inter,goalsConfig.inter_day,'#D97706','#FCD34D')}
+          </div>
+          <div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;display:flex;align-items:center;gap:8px">Esta semana <span style="background:var(--surface2);color:var(--text3);padding:2px 9px;border-radius:99px;font-size:10.5px">${wkLabel}</span></div>
+            ${renderBar('Novos Leads',wkTot.leads,goalsConfig.leads_week,'#E30613','#FF6B7A')}
+            ${renderBar('Conversões',wkTot.conv,goalsConfig.conv_week,'#16A34A','#6EE7B7')}
+            ${renderBar('Interações',wkTot.inter,goalsConfig.inter_week,'#D97706','#FCD34D')}
+          </div>
+        </div>
+      </div>`;
+    })()}
     <div class="dash-grid">
       <div class="chart-card">
         <div class="chart-card-title">Funil de Conversão</div>
