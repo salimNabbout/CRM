@@ -232,7 +232,7 @@ tbody tr:hover td{background:var(--surface2)}
 .field textarea{height:76px;resize:vertical}
 .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:480px){.modal-row{grid-template-columns:1fr}}
-.modal-footer{display:flex;gap:8px;padding:16px 24px;border-top:1px solid var(--border);justify-content:flex-end;background:var(--surface2);border-radius:0 0 var(--radius-xl) var(--radius-xl)}
+.modal-footer{display:flex;gap:8px;padding:16px 24px;border-top:1px solid var(--border);justify-content:flex-end;background:var(--surface2);border-radius:0 0 var(--radius-xl) var(--radius-xl);flex-wrap:wrap;align-items:center}
 .del-btn{margin-right:auto;color:var(--red);border-color:var(--red-mid);background:transparent}
 .del-btn:hover{background:var(--red-bg)}
 
@@ -2129,11 +2129,13 @@ function renderModal(){
 
   mhtml+=`</div>
     <div class="modal-footer">
-      ${editId?`<button class="btn del-btn" onclick="deleteProspect()">${ICONS.trash} Excluir</button>`:''}
-      ${editId?`<button class="btn" onclick="openTemplatePicker('WhatsApp')" title="Enviar WhatsApp com template" style="--btn-ic:#25D366">${ICONS.wa}</button>`:''}
-      ${editId?`<button class="btn" onclick="openTemplatePicker('E-mail')" title="Enviar e-mail com template" style="--btn-ic:#EA4335">${ICONS.mail}</button>`:''}
-      ${editId?`<button class="btn" onclick="openTemplatePicker('LinkedIn')" title="Copiar mensagem LinkedIn" style="--btn-ic:#0A66C2">${ICONS.linkedin}</button>`:''}
-      ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Abre o Outlook com o evento já preenchido" style="--btn-ic:#0078D4">${ICONS.calendar} Agendar no Outlook</button>`:''}
+      ${editId?`<button class="btn del-btn" onclick="deleteProspect()" title="Excluir prospecto">${ICONS.trash} Excluir</button>`:''}
+      ${editId?`<div style="display:flex;gap:3px;align-items:center">
+        <button class="btn" onclick="openTemplatePicker('WhatsApp')" title="Enviar WhatsApp" style="--btn-ic:#25D366;padding:7px 9px">${ICONS.wa}</button>
+        <button class="btn" onclick="openTemplatePicker('E-mail')" title="Enviar e-mail" style="--btn-ic:#EA4335;padding:7px 9px">${ICONS.mail}</button>
+        <button class="btn" onclick="openTemplatePicker('LinkedIn')" title="Copiar mensagem LinkedIn" style="--btn-ic:#0A66C2;padding:7px 9px">${ICONS.linkedin}</button>
+        ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Agendar no Outlook" style="--btn-ic:#0078D4;padding:7px 9px">${ICONS.calendar}</button>`:''}
+      </div>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveModal()">Salvar</button>
     </div>
