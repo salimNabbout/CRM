@@ -567,6 +567,22 @@ async function saveStagesConfig(){
   localStorage.setItem('crm_stages_v1',JSON.stringify(stagesConfig));
 }
 const DEFAULT_ORIGENS=['LinkedIn','Indicação','Cold Email','Cold Call','Site','Evento','WhatsApp','Outro'];
+const DEFAULT_MOTIVOS=['Sem orçamento','Sem fit técnico','Cliente de concorrente','Contato errado (não é decisor)','Timing errado','Sem interesse','Não respondeu após cadência','Outro'];
+let motivosConfig=[...DEFAULT_MOTIVOS];
+async function loadMotivosConfig(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/crm_config?key=eq.motivos&select=value`,{headers:sbHdr()});
+    if(r.ok){const data=await r.json();if(Array.isArray(data[0]?.value)&&data[0].value.length)motivosConfig=data[0].value}
+  }catch{}
+}
+async function saveMotivosConfig(){
+  const r=await fetch(`${SB_URL}/rest/v1/crm_config`,{
+    method:'POST',
+    headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({key:'motivos',value:motivosConfig,updated_at:new Date().toISOString()})
+  });
+  if(!r.ok)throw new Error(await r.text());
+}
 const TEMPLATE_TIPOS=['WhatsApp','E-mail','LinkedIn','Script ligação'];
 const DEFAULT_TEMPLATES=[
   {id:'tpl-wa-1',nome:'WhatsApp — Abordagem inicial',tipo:'WhatsApp',texto:'Olá {{nome}}, tudo bem?\n\nAqui é {{seuNome}} da CETEM Automação. Vimos que a {{empresa}} atua com processos industriais e trabalhamos com automação, Data Science e IA industrial que têm gerado ganhos de eficiência para empresas do seu segmento.\n\nPosso apresentar em 15 minutos o que fazemos? Tem alguma data na sua agenda?'},
@@ -825,7 +841,7 @@ function toggleSidebar(force){
 }
 
 let prospects=[],view='kanban',modal=null,editId=null,modalTab='dados';
-let newHistTxt='',newHistTipo='Nota',filterSearch='',filterStage='',filterOrigem='';
+let newHistTxt='',newHistTipo='Nota',filterSearch='',filterStage='',filterOrigem='',showDesq=false;
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function fmt(v){if(!v||isNaN(v))return'—';return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
@@ -838,11 +854,12 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function initials(nome){const p=(nome||'').trim().split(' ');return(p[0]?.[0]||'')+(p[1]?.[0]||'').toUpperCase()||'?'}
 function avColor(id){const h=id.split('').reduce((a,c)=>a+c.charCodeAt(0),0);return AV_COLORS[h%AV_COLORS.length]}
 
-function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:STAGES[0]||'Lead',notas:'',proximoContato:'',horaContato:'',origem:'',historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
+function openNew(){editId=null;modalTab='dados';modal={nome:'',empresa:'',contato:'',email:'',telefone:'',valor:'',stage:STAGES[0]||'Lead',notas:'',proximoContato:'',horaContato:'',origem:'',desqualificado:false,motivoDesqualificacao:'',historico:[]};newHistTxt='';newHistTipo='Nota';renderModal()}
 function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';renderModal()}
 function closeModal(){modal=null;editId=null;const ov=document.getElementById('modal-overlay');if(ov)ov.remove()}
 async function saveModal(){
   if(!modal.nome.trim()){alert('Nome é obrigatório');return}
+  if(modal.desqualificado&&!modal.motivoDesqualificacao){alert('Selecione o motivo da desqualificação');return}
   const record={...modal,id:editId||uid(),criadoEm:modal.criadoEm||today()};
   if(!editId){
     const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Criação',texto:`Prospecto criado na etapa "${record.stage}"`,auto:true,user:currentUser()};
@@ -851,6 +868,13 @@ async function saveModal(){
     const prev=prospects.find(p=>p.id===editId);
     if(prev&&prev.stage!==record.stage){
       const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Movimentação',texto:`${prev.stage} → ${record.stage}`,auto:true,user:currentUser()};
+      record.historico=[entry,...(record.historico||[])];
+    }
+    if(prev&&!prev.desqualificado&&record.desqualificado){
+      const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Nota',texto:`✕ DESQUALIFICADO — motivo: ${record.motivoDesqualificacao}`,auto:true,user:currentUser()};
+      record.historico=[entry,...(record.historico||[])];
+    } else if(prev&&prev.desqualificado&&!record.desqualificado){
+      const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Nota',texto:`↻ Prospecto reativado`,auto:true,user:currentUser()};
       record.historico=[entry,...(record.historico||[])];
     }
   }
@@ -918,6 +942,11 @@ function dropOnCol(e,stage){
   if(id)moveToStage(id,stage);
 }
 function setField(k,v){modal={...modal,[k]:v}}
+function toggleDesqualificado(val){
+  modal={...modal,desqualificado:val};
+  if(!val){modal.motivoDesqualificacao=''}
+  renderModal();
+}
 function setView(v){view=v;renderTopbar();renderContent()}
 function setTab(t){modalTab=t;renderModal()}
 function addHist(){if(!newHistTxt.trim())return;const h={id:uid(),data:today(),tipo:newHistTipo,texto:newHistTxt.trim()};modal.historico=[h,...(modal.historico||[])];newHistTxt='';renderModal()}
@@ -1056,7 +1085,7 @@ function exportPDF(){
   toast('PDF gerado com sucesso');
 }
 function exportCSV(){const cols=['Nome','Empresa','Contato','E-mail','Telefone','Etapa','Valor','Próximo Contato','Notas','Criado em'];const rows=prospects.map(p=>[p.nome,p.empresa,p.contato,p.email,p.telefone,p.stage,p.valor||'',fmtDateFull(p.proximoContato)||'',p.notas,fmtDateFull(p.criadoEm)||p.criadoEm||'']);const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='prospects.csv';a.click()}
-function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;const matchO=!filterOrigem||p.origem===filterOrigem;return matchS&&matchSt&&matchO})}
+function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;const matchO=!filterOrigem||p.origem===filterOrigem;const matchD=showDesq?p.desqualificado:!p.desqualificado;return matchS&&matchSt&&matchO&&matchD})}
 
 const ICONS={
   logo:`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="44" ry="34" transform="rotate(-18 50 50)" fill="none" stroke="#E30613" stroke-width="7" stroke-linecap="round"/><ellipse cx="50" cy="50" rx="46" ry="12" transform="rotate(-12 50 50)" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/></svg>`,
@@ -1248,6 +1277,7 @@ function renderFull(){
       <option value="">Todas as origens</option>
       ${origensConfig.map(o=>`<option value="${esc(o)}"${filterOrigem===o?' selected':''}>${esc(o)}</option>`).join('')}
     </select>
+    <button class="btn${showDesq?' primary':' ghost'}" onclick="showDesq=!showDesq;renderFull()" title="Alternar entre prospectos ativos e desqualificados">${showDesq?'✓ Desqualificados':'Ativos'}</button>
     ${(filterSearch||filterStage||filterOrigem)?`<button class="btn ghost" onclick="filterSearch='';filterStage='';filterOrigem='';renderFull()">Limpar filtro</button>`:''}
   </div>
   <div id="content-area"></div>`;
@@ -1336,6 +1366,7 @@ function computeHeatmap(mKey){
 function computeDormant(){
   const now=new Date();
   return prospects.map(p=>{
+    if(p.desqualificado)return null;
     const hist=(p.historico||[]).slice().sort((a,b)=>(b.data+(b.hora||'')).localeCompare(a.data+(a.hora||'')));
     if(!hist.length)return null;
     const last=hist[0];
@@ -1500,6 +1531,28 @@ async function renderAnalytics(){
         </div>`;
       })()}
     </div>
+    ${(()=>{
+      const desqs=prospects.filter(p=>p.desqualificado);
+      if(!desqs.length)return '';
+      const byMotivo={};
+      desqs.forEach(p=>{const m=p.motivoDesqualificacao||'Sem motivo';byMotivo[m]=(byMotivo[m]||0)+1});
+      const rows=Object.entries(byMotivo).sort((a,b)=>b[1]-a[1]);
+      const total=desqs.length;
+      return `<div class="chart-card" style="margin-top:14px">
+        <div class="chart-card-title">Motivos de desqualificação</div>
+        <div class="chart-card-sub">${total} prospecto${total!==1?'s':''} desqualificado${total!==1?'s':''} — aprender o que filtrar melhor na entrada</div>
+        <div style="margin-top:10px">
+          ${rows.map(([m,c])=>{
+            const pct=Math.round(c/total*100);
+            return `<div class="goal-row" style="--gc-a:#DC2626;--gc-b:#F87171">
+              <div class="goal-label" style="min-width:180px">${esc(m)}</div>
+              <div class="goal-bar-wrap"><div class="goal-bar" style="width:${pct}%"></div></div>
+              <div class="goal-val">${c} · ${pct}%</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    })()}
     ${dormant.length?`<div class="chart-card" style="margin-top:14px">
       <div class="chart-card-title" style="color:var(--amber)">⚠️ Prospectos dormentes</div>
       <div class="chart-card-sub">Sem movimento há mais de 14 dias — considere retomar contato</div>
@@ -1771,6 +1824,22 @@ function renderSettings(){
     </div>
 
     <div class="settings-card" style="margin-top:18px">
+      <h3>Motivos de Desqualificação</h3>
+      <div class="h-sub">Opções disponíveis ao desqualificar um prospecto. Analise os motivos na página <b>Análise</b></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        ${motivosConfig.map((m,i)=>`<div style="display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:4px 4px 4px 12px;font-size:12.5px">
+          <span>${esc(m)}</span>
+          <button onclick="removeMotivo(${i})" style="background:transparent;border:none;cursor:pointer;color:var(--text3);padding:2px 6px;border-radius:50%;font-size:14px;line-height:1" title="Remover">×</button>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="new-motivo-input" placeholder="Novo motivo (ex: Fora do ICP)" style="flex:1;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;background:transparent;color:var(--text)">
+        <button class="btn" onclick="addMotivo()">${ICONS.plus} Adicionar</button>
+        <button class="btn primary" onclick="commitMotivos()">Salvar motivos</button>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:18px">
       <h3>Templates de Mensagem</h3>
       <div class="h-sub">Variáveis disponíveis: <code>{{nome}}</code> <code>{{empresa}}</code> <code>{{cargo}}</code> <code>{{telefone}}</code> <code>{{email}}</code> <code>{{seuNome}}</code></div>
       ${templatesConfig.map((t,i)=>`
@@ -1841,6 +1910,20 @@ function removeOrigem(i){
 }
 async function commitOrigens(){
   try{await saveOrigensConfig();toast('Origens salvas');renderSettings()}catch(e){toast('Erro ao salvar origens: '+e.message,'error')}
+}
+function addMotivo(){
+  const inp=document.getElementById('new-motivo-input');
+  const v=(inp?.value||'').trim();
+  if(!v)return;
+  if(motivosConfig.includes(v)){toast('Motivo já existe','error');return}
+  motivosConfig.push(v);renderSettings();
+}
+function removeMotivo(i){
+  if(!confirm(`Remover "${motivosConfig[i]}"?`))return;
+  motivosConfig.splice(i,1);renderSettings();
+}
+async function commitMotivos(){
+  try{await saveMotivosConfig();toast('Motivos salvos');renderSettings()}catch(e){toast('Erro ao salvar motivos: '+e.message,'error')}
 }
 function addTemplate(){
   templatesConfig.push({id:'tpl-'+uid(),nome:'Novo template',tipo:'WhatsApp',texto:''});
@@ -2079,6 +2162,7 @@ function renderContent(){
               ${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span class="date-none">Sem data</span>`}
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap">
+              ${p.desqualificado?`<span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:99px;font-weight:600;font-size:10.5px">✕ ${esc(p.motivoDesqualificacao||'Desqualificado')}</span>`:''}
               ${p.origem?`<span style="background:var(--surface2);color:var(--text2);padding:2px 8px;border-radius:99px;font-weight:500;font-size:10.5px">${esc(p.origem)}</span>`:''}
               ${hl?`<span>${hl} interaç${hl>1?'ões':'ão'}</span>`:''}
             </div>
@@ -2184,6 +2268,18 @@ function renderModal(){
           ${origensConfig.map(o=>`<option value="${esc(o)}"${modal.origem===o?' selected':''}>${esc(o)}</option>`).join('')}
         </select>
       </div>
+      <div class="field" style="padding:12px;border:1px dashed var(--border2);border-radius:var(--radius);background:${modal.desqualificado?'var(--red-bg)':'transparent'}">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:${modal.desqualificado?'var(--red)':'var(--text)'}">
+          <input type="checkbox" ${modal.desqualificado?'checked':''} onchange="toggleDesqualificado(this.checked)" style="width:16px;height:16px;cursor:pointer">
+          ${modal.desqualificado?'✕ Prospecto desqualificado':'Desqualificar prospecto'}
+        </label>
+        ${modal.desqualificado?`<div style="margin-top:10px"><label style="font-size:11px;color:var(--red);margin-bottom:6px">Motivo da desqualificação *</label>
+          <select oninput="setField('motivoDesqualificacao',this.value)" style="border-color:var(--red-mid)">
+            <option value="">— Selecione o motivo —</option>
+            ${motivosConfig.map(m=>`<option value="${esc(m)}"${modal.motivoDesqualificacao===m?' selected':''}>${esc(m)}</option>`).join('')}
+          </select>
+        </div>`:''}
+      </div>
       <div class="field"><label>Notas</label><textarea oninput="setField('notas',this.value)" placeholder="Observações, próximos passos...">${esc(modal.notas)}</textarea></div>`;
   } else {
     const hist=modal.historico||[];
@@ -2231,6 +2327,7 @@ async function init(){
   document.getElementById('app').innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:40vh;gap:10px;color:var(--text3);font-size:14px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Carregando dados...</div>`;
   await loadStagesConfig();
   await loadOrigensConfig();
+  await loadMotivosConfig();
   await loadTemplatesConfig();
   await loadGoalsConfig();
   prospects=await dbFetch();
