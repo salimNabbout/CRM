@@ -266,6 +266,49 @@ tbody tr:hover td{background:var(--surface2)}
 #login-screen .field{margin-bottom:14px}
 #login-screen .btn.primary{width:100%;justify-content:center;padding:11px}
 .logout-btn{padding:7px 10px}
+
+/* === V2: Sidebar layout === */
+body{display:block}
+#app-shell{display:flex;min-height:100vh}
+#sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:90;overflow-y:auto}
+.s-logo{padding:18px 20px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:center;align-items:center;min-height:74px}
+.s-logo img{max-width:170px;height:auto;display:block}
+html.dark .s-logo img{background:#fff;border-radius:6px;padding:6px 10px}
+.s-nav{flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:3px}
+.s-section{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:500;color:var(--text2);cursor:pointer;transition:all 0.15s;border:none;background:transparent;text-align:left;font-family:inherit;width:100%;line-height:1}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent);color:var(--accent-fg);font-weight:600;box-shadow:0 2px 8px rgba(227,6,19,0.25)}
+.nav-item.active:hover{background:var(--accent-dark)}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;stroke-width:2}
+.s-footer{padding:10px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
+.s-user{padding:12px;border-radius:10px;background:var(--surface2);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.s-user-av{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;text-transform:uppercase}
+.s-user-info{flex:1;min-width:0;line-height:1.3}
+.s-user-name{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-user-email{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Main content */
+#main-content{flex:1;margin-left:240px;display:flex;flex-direction:column;min-height:100vh;width:calc(100% - 240px)}
+#topbar-wrap{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:box-shadow 0.2s}
+#topbar-wrap.scrolled{box-shadow:0 2px 12px rgba(0,0,0,0.08)}
+.topbar{max-width:none;padding:0 28px;height:64px;margin:0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar .page-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
+.topbar .page-sub{font-size:12px;color:var(--text3);font-weight:500;margin-top:2px}
+#app{max-width:1400px;margin:0 auto;padding:1.5rem 1.75rem;width:100%}
+
+/* Mobile */
+.mobile-menu-btn{display:none;padding:7px 10px}
+@media(max-width:900px){
+  #sidebar{transform:translateX(-100%);transition:transform 0.22s ease}
+  #sidebar.open{transform:translateX(0);box-shadow:0 12px 40px rgba(0,0,0,0.25)}
+  #sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:85}
+  #sidebar-backdrop.open{display:block}
+  #main-content{margin-left:0;width:100%}
+  .mobile-menu-btn{display:inline-flex}
+  .topbar{padding:0 16px}
+  #app{padding:1rem}
+}
 </style>
 </head>
 <body>
@@ -286,10 +329,20 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<div id="topbar-wrap" style="display:none">
-  <div class="topbar" id="topbar"></div>
+<div id="app-shell" style="display:none">
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
+  <aside id="sidebar">
+    <div class="s-logo"><img src="logo-cetem.jpg" alt="CETEM Automação"></div>
+    <nav class="s-nav" id="sidebar-nav"></nav>
+    <div class="s-footer" id="sidebar-footer"></div>
+  </aside>
+  <div id="main-content">
+    <div id="topbar-wrap">
+      <div class="topbar" id="topbar"></div>
+    </div>
+    <div id="app"></div>
+  </div>
 </div>
-<div id="app"></div>
 
 <script>
 const STAGES=['Lead','Contato feito','Qualificação','Reunião Agendada'];
@@ -407,13 +460,20 @@ async function doLogout(){
 }
 function showLogin(){
   document.getElementById('login-screen').style.display='flex';
-  document.getElementById('topbar-wrap').style.display='none';
+  document.getElementById('app-shell').style.display='none';
   document.getElementById('app').innerHTML='';
 }
 async function showApp(){
   document.getElementById('login-screen').style.display='none';
-  document.getElementById('topbar-wrap').style.display='block';
+  document.getElementById('app-shell').style.display='flex';
   await init();
+}
+function toggleSidebar(force){
+  const sb=document.getElementById('sidebar');
+  const bd=document.getElementById('sidebar-backdrop');
+  const open=force===undefined?!sb.classList.contains('open'):force;
+  sb.classList.toggle('open',open);
+  bd.classList.toggle('open',open);
 }
 
 let prospects=[],view='kanban',modal=null,editId=null,modalTab='dados';
@@ -576,7 +636,8 @@ const ICONS={
   trending:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
   logout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
   calendar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-  user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+  user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  settings:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`
 };
 
 function toast(msg,type='success'){
@@ -614,32 +675,67 @@ window.addEventListener('scroll',()=>{
   if(tw)tw.classList.toggle('scrolled',window.scrollY>10);
 });
 
+function renderSidebar(){
+  const nav=document.getElementById('sidebar-nav');
+  const ftr=document.getElementById('sidebar-footer');
+  if(!nav||!ftr)return;
+  const items=[
+    {id:'pipeline',label:'Pipeline',icon:ICONS.layers},
+    {id:'dashboard',label:'Dashboard',icon:ICONS.trending},
+    {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers}
+  ];
+  nav.innerHTML=`<div class="s-section">Navegação</div>`+
+    items.map(it=>`<button class="nav-item${(window.currentPage||'pipeline')===it.id?' active':''}" onclick="setPage('${it.id}')">${it.icon}<span>${it.label}</span></button>`).join('');
+  const email=session?.user?.email||'';
+  const initial=(email[0]||'?').toUpperCase();
+  const isDark=document.documentElement.classList.contains('dark');
+  ftr.innerHTML=`
+    <div class="s-user">
+      <div class="s-user-av">${initial}</div>
+      <div class="s-user-info">
+        <div class="s-user-name">${esc(email.split('@')[0])}</div>
+        <div class="s-user-email">${esc(email)}</div>
+      </div>
+    </div>
+    <button class="nav-item" onclick="toggleTheme()">${isDark?ICONS.sun:ICONS.moon}<span>Tema ${isDark?'claro':'escuro'}</span></button>
+    <button class="nav-item" onclick="openProfile()">${ICONS.user}<span>Meu perfil</span></button>
+    <button class="nav-item" onclick="doLogout()" style="color:var(--red)">${ICONS.logout}<span>Sair</span></button>`;
+}
+function setPage(p){
+  window.currentPage=p;
+  renderSidebar();
+  renderFull();
+}
 function renderTopbar(){
   const all=prospects;
+  const page=window.currentPage||'pipeline';
+  const titles={pipeline:{t:'Pipeline de Prospecção',s:`${all.length} prospect${all.length!==1?'s':''} ativo${all.length!==1?'s':''}`},dashboard:{t:'Dashboard',s:'Visão geral e indicadores'},settings:{t:'Configurações',s:'Personalize seu CRM'}};
+  const cur=titles[page]||titles.pipeline;
   document.getElementById('topbar').innerHTML=`
-    <div class="brand">
-      <div class="brand-icon"><img src="logo-cetem.jpg" alt="CETEM Automação"></div>
-      <div>
-        <div class="brand-sub" style="font-size:13px;color:var(--text);font-weight:600;margin-top:0">CRM Prospecção</div>
-        <div class="brand-sub">${all.length} prospect${all.length!==1?'s':''} no pipeline</div>
+    <div style="display:flex;align-items:center;gap:12px;min-width:0">
+      <button class="btn ghost mobile-menu-btn" onclick="toggleSidebar()" title="Menu">${ICONS.list}</button>
+      <div style="min-width:0">
+        <div class="page-title">${cur.t}</div>
+        <div class="page-sub">${cur.s}</div>
       </div>
     </div>
     <div class="topbar-actions">
-      <div class="view-toggle">
+      ${page==='pipeline'?`<div class="view-toggle">
         <button class="btn${view==='kanban'?' active':''}" onclick="setView('kanban')">${ICONS.grid} Kanban</button>
         <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')">${ICONS.list} Lista</button>
       </div>
-      <button class="btn ghost" onclick="toggleTheme()" title="Alternar tema" style="padding:7px 10px">${document.documentElement.classList.contains('dark')?ICONS.sun:ICONS.moon}</button>
       <button class="btn ghost" onclick="exportCSV()">${ICONS.download} CSV</button>
-      <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo prospect</button>
-      <button class="btn ghost logout-btn" onclick="openProfile()" title="Meu perfil / trocar senha">${ICONS.user}</button>
-      <button class="btn ghost logout-btn" onclick="doLogout()" title="Sair">${ICONS.logout}</button>
+      <button class="btn primary" onclick="openNew()">${ICONS.plus} Novo prospect</button>`:''}
     </div>`;
 }
 
 function renderFull(){
+  renderSidebar();
   renderTopbar();
+  const page=window.currentPage||'pipeline';
   const app=document.getElementById('app');
+  if(page==='dashboard'){app.innerHTML=`<div class="empty" style="padding:5rem 1rem"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span style="margin-top:14px;font-size:14px">Dashboard com gráficos chega na Fase 3</span></div>`;return}
+  if(page==='settings'){app.innerHTML=`<div class="empty" style="padding:5rem 1rem"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6"/></svg><span style="margin-top:14px;font-size:14px">Configurações de pipeline chegam na Fase 4</span></div>`;return}
   const all=prospects;
   const totalVal=all.reduce((s,p)=>s+(Number(p.valor)||0),0);
   const byCnt=STAGES.map(s=>all.filter(p=>p.stage===s).length);
