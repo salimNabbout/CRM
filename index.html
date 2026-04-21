@@ -1349,28 +1349,6 @@ async function renderAnalytics(){
         </div>
       </div>
     </div>
-    ${users.length?`<div class="chart-card" style="margin-top:14px">
-      <div class="chart-card-title">Comparativo por usuário</div>
-      <div class="chart-card-sub">Quem mais movimentou o funil em ${monthName}</div>
-      <div style="margin-top:10px">
-        ${users.map((u,i)=>{
-          const s=byUser[u];
-          const uShort=u.split('@')[0];
-          const initial=uShort.charAt(0).toUpperCase();
-          const color=userColors[i%userColors.length];
-          return `<div class="user-row">
-            <div class="user-av" style="--c:${color}">${initial}</div>
-            <div class="user-name">${esc(uShort)}</div>
-            <div class="user-stats">
-              <span><b>${s.leads}</b> leads</span>
-              <span><b>${s.movs}</b> movs</span>
-              <span><b>${s.inter}</b> inter</span>
-              <span style="color:var(--green)"><b>${s.conv}</b> conv</span>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`:''}
     <div class="chart-card" style="margin-top:14px">
       <div class="chart-card-title">Comparativo mensal</div>
       <div class="chart-card-sub">Totais consolidados — base para decisões estratégicas</div>
