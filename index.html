@@ -166,6 +166,11 @@ html.dark .brand-icon img{background:#fff;border-radius:6px;padding:3px 6px}
 .move-btns{display:flex;gap:4px;margin-top:10px}
 .move-btn{font-size:11px;font-weight:500;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:3px}
 .move-btn:hover{background:var(--surface2);border-color:var(--border2);color:var(--text)}
+.card[draggable="true"]{cursor:grab}
+.card[draggable="true"]:active{cursor:grabbing}
+.card.dragging{opacity:0.4;transform:rotate(-2deg) scale(0.98);box-shadow:0 12px 30px rgba(227,6,19,0.25)}
+.col.col-drop{background:rgba(227,6,19,0.06);border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;transition:all 0.12s}
+.col.col-drop .col-head{border-bottom-color:var(--accent)}
 .empty-col{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;color:var(--text3)}
 .empty-col svg{width:28px;height:28px;margin-bottom:8px;opacity:0.35}
 .empty-col span{font-size:13px}
@@ -513,21 +518,46 @@ async function deleteProspect(){
     closeModal();renderFull();toast('Prospect excluído');
   }catch(e){toast('Erro ao excluir: '+e.message,'error')}
 }
-async function moveStage(id,dir,e){
-  if(e)e.stopPropagation();
-  const p=prospects.find(x=>x.id===id);if(!p)return;
-  const i=STAGES.indexOf(p.stage);const ni=i+dir;
-  if(ni<0||ni>=STAGES.length)return;
-  const newStage=STAGES[ni];
+async function moveToStage(id,newStage){
+  const p=prospects.find(x=>x.id===id);if(!p||p.stage===newStage)return;
+  const oldStage=p.stage;
   prospects=prospects.map(x=>x.id===id?{...x,stage:newStage}:x);
   renderContent();
   try{
     await dbPatch(id,{stage:newStage});
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
   }catch(e){
-    prospects=prospects.map(x=>x.id===id?{...x,stage:STAGES[i]}:x);
-    renderContent();alert('Erro ao mover: '+e.message);
+    prospects=prospects.map(x=>x.id===id?{...x,stage:oldStage}:x);
+    renderContent();toast('Erro ao mover: '+e.message,'error');
   }
+}
+async function moveStage(id,dir,e){
+  if(e)e.stopPropagation();
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const i=STAGES.indexOf(p.stage);const ni=i+dir;
+  if(ni<0||ni>=STAGES.length)return;
+  await moveToStage(id,STAGES[ni]);
+}
+let dragId=null;
+function dragStart(e,id){
+  dragId=id;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',id);
+  setTimeout(()=>{const el=document.querySelector(`[data-card-id="${id}"]`);if(el)el.classList.add('dragging')},0);
+}
+function dragEnd(){
+  document.querySelectorAll('.card.dragging').forEach(el=>el.classList.remove('dragging'));
+  document.querySelectorAll('.col.col-drop').forEach(el=>el.classList.remove('col-drop'));
+  dragId=null;
+}
+function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move'}
+function dragEnter(e){e.currentTarget.classList.add('col-drop')}
+function dragLeave(e){if(!e.currentTarget.contains(e.relatedTarget))e.currentTarget.classList.remove('col-drop')}
+function dropOnCol(e,stage){
+  e.preventDefault();
+  e.currentTarget.classList.remove('col-drop');
+  const id=dragId||e.dataTransfer.getData('text/plain');
+  if(id)moveToStage(id,stage);
 }
 function setField(k,v){modal={...modal,[k]:v}}
 function setView(v){view=v;renderTopbar();renderContent()}
@@ -804,7 +834,7 @@ function renderContent(){
     html+=`<div class="kanban">`;
     STAGES.forEach((stage,si)=>{
       const cards=vis.filter(p=>p.stage===stage);
-      html+=`<div class="col ${SCOL[stage]}">
+      html+=`<div class="col ${SCOL[stage]}" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="dropOnCol(event,'${stage}')">
         <div class="col-head">
           <span class="col-dot ${SDOT[stage]}"></span>
           <span class="col-name">${stage}</span>
@@ -818,7 +848,7 @@ function renderContent(){
           const dl=dateLabel(p.proximoContato);
           const av=avColor(p.id);
           const hl=(p.historico||[]).length;
-          html+=`<div class="card" onclick="openEdit('${p.id}')">
+          html+=`<div class="card" data-card-id="${p.id}" draggable="true" ondragstart="dragStart(event,'${p.id}')" ondragend="dragEnd(event)" onclick="openEdit('${p.id}')">
             <div class="card-header">
               <div class="card-avatar ${av}">${esc(initials(p.nome))}</div>
               <div class="card-info">
