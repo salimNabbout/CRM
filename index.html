@@ -1468,7 +1468,7 @@ function renderSidebar(){
   const items=[
     {id:'pipeline',label:'Pipeline',icon:ICONS.layers,color:'#2563EB'},
     {id:'dashboard',label:'Dashboard',icon:ICONS.trending,color:'#16A34A',adminOnly:true},
-    {id:'analytics',label:'Análise',icon:ICONS.chart||ICONS.trending,color:'#EC4899'},
+    {id:'analytics',label:'Análise',icon:ICONS.chart||ICONS.trending,color:'#EC4899',adminOnly:true},
     {id:'agenda',label:'Agenda',icon:ICONS.calendar,color:'#7C3AED'},
     {id:'settings',label:'Configurações',icon:ICONS.settings||ICONS.layers,color:'#F97316',adminOnly:true}
   ].filter(it=>!it.adminOnly||admin);
@@ -1490,7 +1490,7 @@ function renderSidebar(){
     <button class="nav-item" onclick="doLogout()" style="color:var(--red);--ic:var(--red)">${ICONS.logout}<span>Sair</span></button>`;
 }
 function setPage(p){
-  if((p==='dashboard'||p==='settings')&&!isAdmin()){
+  if((p==='dashboard'||p==='settings'||p==='analytics')&&!isAdmin()){
     toast('Acesso restrito aos administradores','error');return;
   }
   if(window.currentPage==='settings'&&p!=='settings'&&settingsDirty){
@@ -1527,7 +1527,7 @@ function renderTopbar(){
 function renderFull(){
   renderSidebar();
   // Guard páginas restritas
-  if((window.currentPage==='dashboard'||window.currentPage==='settings')&&!isAdmin()){
+  if((window.currentPage==='dashboard'||window.currentPage==='settings'||window.currentPage==='analytics')&&!isAdmin()){
     window.currentPage='pipeline';
   }
   renderTopbar();
