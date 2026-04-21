@@ -62,8 +62,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 #topbar-wrap.scrolled{box-shadow:0 2px 12px rgba(0,0,0,0.08)}
 .topbar{display:flex;align-items:center;justify-content:space-between;max-width:1180px;margin:0 auto;padding:0 1.5rem;height:var(--topbar-h);flex-wrap:wrap;gap:12px}
 .brand{display:flex;align-items:center;gap:11px}
-.brand-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-icon{height:46px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-icon img{height:46px;width:auto;display:block;object-fit:contain}
 .brand-icon svg{width:42px;height:42px;display:block}
+html.dark .brand-icon img{background:#fff;border-radius:6px;padding:3px 6px}
 .brand-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:800;color:var(--brand-black);letter-spacing:-0.3px;text-transform:uppercase}
 .brand-text .b-red{color:var(--accent)}
 .brand-sub{font-size:11px;color:var(--text3);font-weight:500;margin-top:2px;letter-spacing:0.3px}
@@ -271,8 +273,7 @@ tbody tr:hover td{background:var(--surface2)}
 <div id="login-screen" style="display:none">
   <div class="login-card">
     <div class="login-brand">
-      <div class="brand-icon"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="44" ry="34" transform="rotate(-18 50 50)" fill="none" stroke="#E30613" stroke-width="7" stroke-linecap="round"/><ellipse cx="50" cy="50" rx="46" ry="12" transform="rotate(-12 50 50)" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/></svg></div>
-      <div class="brand-text">CETEM <span class="b-red">Automação</span></div>
+      <img src="logo-cetem.jpg" alt="CETEM Automação" style="max-width:220px;height:auto;display:block">
     </div>
     <div class="login-title">CRM Prospecção</div>
     <div class="login-sub">Entre com seu e-mail e senha</div>
@@ -490,10 +491,10 @@ function renderTopbar(){
   const all=prospects;
   document.getElementById('topbar').innerHTML=`
     <div class="brand">
-      <div class="brand-icon">${ICONS.logo}</div>
+      <div class="brand-icon"><img src="logo-cetem.jpg" alt="CETEM Automação"></div>
       <div>
-        <div class="brand-text">CETEM <span class="b-red">Automação</span></div>
-        <div class="brand-sub">CRM · ${all.length} prospect${all.length!==1?'s':''} no pipeline</div>
+        <div class="brand-sub" style="font-size:13px;color:var(--text);font-weight:600;margin-top:0">CRM Prospecção</div>
+        <div class="brand-sub">${all.length} prospect${all.length!==1?'s':''} no pipeline</div>
       </div>
     </div>
     <div class="topbar-actions">
