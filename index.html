@@ -516,7 +516,6 @@ const ADMINS=['salim@cetemrj.com.br'];
 function isAdmin(){return ADMINS.includes((session?.user?.email||'').toLowerCase())}
 const SB_API=`${SB_URL}/rest/v1/prospects`;
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'crm_auth'}});
-const sbAdmin=window.supabase.createClient(SB_URL,SB_SERVICE_KEY,{auth:{autoRefreshToken:false,persistSession:false}});
 let session=null;
 function sbHdr(extra){
   const tok=session?.access_token||SB_KEY;
@@ -1064,7 +1063,8 @@ async function createUser(){
   if(!email){err.textContent='Informe o e-mail do novo usuário';err.style.display='block';return}
   if(pwd.length<6){err.textContent='A senha deve ter no mínimo 6 caracteres';err.style.display='block';return}
   btn.disabled=true;btn.textContent='Criando...';
-  const {data,error}=await sbAdmin.auth.admin.createUser({email,password:pwd,email_confirm:true});
+  const adminClient=window.supabase.createClient(SB_URL,SB_SERVICE_KEY,{auth:{autoRefreshToken:false,persistSession:false}});
+  const {error}=await adminClient.auth.admin.createUser({email,password:pwd,email_confirm:true});
   btn.disabled=false;btn.textContent='Criar usuário';
   if(error){err.textContent=error.message||'Erro ao criar usuário';err.style.display='block';return}
   ok.textContent=`Usuário ${email} criado com sucesso! Já pode fazer login.`;ok.style.display='block';
