@@ -510,6 +510,7 @@ const AV_COLORS=['av-blue','av-amber','av-green','av-purple','av-red'];
 // Supabase config
 const SB_URL='https://bubdoqvlsodiidhcarey.supabase.co';
 const SB_KEY='sb_publishable_4p4W83oDOtlSNRJUj16TFA_Ptve7SPv';
+const SB_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YmRvcXZsc29kaWlkaGNhcmV5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjY5MzM3MSwiZXhwIjoyMDkyMjY5MzcxfQ.0ho8DQY216SfUyDgw7VmQu0SssNgxRHqkxXa8_Nc8Xc';
 // Lista de administradores - têm acesso a Dashboard e Configurações
 const ADMINS=['salim@cetemrj.com.br'];
 function isAdmin(){return ADMINS.includes((session?.user?.email||'').toLowerCase())}
@@ -1062,10 +1063,15 @@ async function createUser(){
   if(!email){err.textContent='Informe o e-mail do novo usuário';err.style.display='block';return}
   if(pwd.length<6){err.textContent='A senha deve ter no mínimo 6 caracteres';err.style.display='block';return}
   btn.disabled=true;btn.textContent='Criando...';
-  const {error}=await sb.auth.signUp({email,password:pwd});
+  const r=await fetch(`${SB_URL}/auth/v1/admin/users`,{
+    method:'POST',
+    headers:{'apikey':SB_SERVICE_KEY,'Authorization':`Bearer ${SB_SERVICE_KEY}`,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password:pwd,email_confirm:true})
+  });
+  const data=await r.json();
   btn.disabled=false;btn.textContent='Criar usuário';
-  if(error){err.textContent=error.message;err.style.display='block';return}
-  ok.textContent=`Usuário ${email} criado! Um e-mail de confirmação foi enviado.`;ok.style.display='block';
+  if(!r.ok){err.textContent=data.message||data.error_description||'Erro ao criar usuário';err.style.display='block';return}
+  ok.textContent=`Usuário ${email} criado com sucesso! Já pode fazer login.`;ok.style.display='block';
   document.getElementById('ua-email').value='';
   document.getElementById('ua-pwd').value='';
   toast('Usuário criado com sucesso');
