@@ -511,7 +511,7 @@ const AV_COLORS=['av-blue','av-amber','av-green','av-purple','av-red'];
 // Supabase config
 const SB_URL='https://bubdoqvlsodiidhcarey.supabase.co';
 const SB_KEY='sb_publishable_4p4W83oDOtlSNRJUj16TFA_Ptve7SPv';
-const SB_SERVICE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YmRvcXZsc29kaWlkaGNhcmV5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjY5MzM3MSwiZXhwIjoyMDkyMjY5MzcxfQ.0ho8DQY216SfUyDgw7VmQu0SssNgxRHqkxXa8_Nc8Xc';
+let _serviceKey=sessionStorage.getItem('crm_sk')||'';
 // Lista de administradores - têm acesso a Dashboard e Configurações
 const ADMINS=['salim@cetemrj.com.br'];
 function isAdmin(){return ADMINS.includes((session?.user?.email||'').toLowerCase())}
@@ -1009,10 +1009,11 @@ function openUserAdmin(){
       <div id="ua-pane-cadastro">
         <div id="ua-err" style="display:none" class="login-err"></div>
         <div id="ua-ok" style="display:none;background:var(--green-bg);border:1px solid var(--green-mid);color:var(--green);padding:10px 12px;border-radius:var(--radius);font-size:12px;margin-bottom:14px"></div>
+        <div class="field"><label>Chave de serviço (service_role)</label><input id="ua-sk" type="password" placeholder="Cole aqui a chave do Supabase → Settings → API" value="${esc(_serviceKey)}" autocomplete="off"><div style="font-size:11px;color:var(--text3);margin-top:4px">Salva apenas nesta sessão, nunca no código.</div></div>
         <div class="field"><label>E-mail do novo usuário</label><input id="ua-email" type="email" placeholder="nome@empresa.com.br" autocomplete="off"></div>
         <div class="field"><label>Senha temporária</label><input id="ua-pwd" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
         <div style="background:var(--blue-bg);border:1px solid var(--blue-mid);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--blue);margin-top:4px">
-          O usuário receberá um e-mail de confirmação e poderá alterar a senha no primeiro acesso.
+          O usuário poderá fazer login imediatamente após ser criado.
         </div>
       </div>
       <div id="ua-pane-log" style="display:none">
@@ -1055,16 +1056,19 @@ async function renderAccessLog(){
 }
 async function createUser(){
   if(!isAdmin())return;
+  const sk=(document.getElementById('ua-sk')?.value||'').trim();
   const email=document.getElementById('ua-email').value.trim();
   const pwd=document.getElementById('ua-pwd').value;
   const err=document.getElementById('ua-err');
   const ok=document.getElementById('ua-ok');
   const btn=document.getElementById('ua-save');
   err.style.display='none';ok.style.display='none';
+  if(!sk){err.textContent='Informe a chave de serviço (service_role)';err.style.display='block';return}
   if(!email){err.textContent='Informe o e-mail do novo usuário';err.style.display='block';return}
   if(pwd.length<6){err.textContent='A senha deve ter no mínimo 6 caracteres';err.style.display='block';return}
   btn.disabled=true;btn.textContent='Criando...';
-  const adminClient=window.supabase.createClient(SB_URL,SB_SERVICE_KEY,{auth:{autoRefreshToken:false,persistSession:false}});
+  _serviceKey=sk;sessionStorage.setItem('crm_sk',sk);
+  const adminClient=window.supabase.createClient(SB_URL,sk,{auth:{autoRefreshToken:false,persistSession:false}});
   const {error}=await adminClient.auth.admin.createUser({email,password:pwd,email_confirm:true});
   btn.disabled=false;btn.textContent='Criar usuário';
   if(error){err.textContent=error.message||'Erro ao criar usuário';err.style.display='block';return}
