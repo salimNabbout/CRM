@@ -1636,6 +1636,7 @@ function renderTopbar(){
     </div>`;
 }
 
+let _importData=null;
 function triggerImportExcel(){
   const inp=document.getElementById('excel-input');
   if(inp){inp.value='';inp.click()}
@@ -1651,14 +1652,10 @@ async function importExcel(input){
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
       if(!rows.length){toast('Planilha vazia','error');return}
-      // Normaliza cabeçalhos
       const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
       const findCol=(row,keys)=>{
-        const cols=Object.keys(row);
-        for(const k of keys){
-          const found=cols.find(c=>norm(c)===k);
-          if(found)return found;
-        }
+        const colKeys=Object.keys(row);
+        for(const k of keys){const found=colKeys.find(c=>norm(c)===k);if(found)return found;}
         return null;
       };
       const sample=rows[0];
@@ -1666,15 +1663,15 @@ async function importExcel(input){
       const colEmpresa=findCol(sample,['empresa','company','razao social','cliente']);
       const colEmail=findCol(sample,['email','e-mail','mail']);
       if(!colNome){toast('Coluna "Nome" não encontrada na planilha','error');return}
-      // Mostra prévia antes de importar
-      openImportPreview(rows,{colNome,colEmpresa,colEmail});
-    }catch(err){
-      toast('Erro ao ler o arquivo: '+err.message,'error');
-    }
+      _importData={rows,cols:{colNome,colEmpresa,colEmail}};
+      openImportPreview();
+    }catch(err){toast('Erro ao ler o arquivo: '+err.message,'error')}
   };
   reader.readAsArrayBuffer(file);
 }
-function openImportPreview(rows,cols){
+function openImportPreview(){
+  if(!_importData)return;
+  const {rows,cols}=_importData;
   const existing=document.getElementById('import-overlay');
   if(existing)existing.remove();
   const preview=rows.slice(0,5);
@@ -1710,12 +1707,14 @@ function openImportPreview(rows,cols){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="document.getElementById('import-overlay').remove()">Cancelar</button>
-      <button class="btn primary" id="import-confirm-btn" onclick="confirmImport(${JSON.stringify(rows).split('"').join('&quot;')},${JSON.stringify(cols).split('"').join('&quot;')})">Importar ${rows.length} card${rows.length!==1?'s':''}</button>
+      <button class="btn primary" id="import-confirm-btn" onclick="confirmImport()">Importar ${rows.length} card${rows.length!==1?'s':''}</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
 }
-async function confirmImport(rows,cols){
+async function confirmImport(){
+  if(!_importData)return;
+  const {rows,cols}=_importData;
   const btn=document.getElementById('import-confirm-btn');
   if(btn){btn.disabled=true;btn.textContent='Importando...';}
   let ok=0,fail=0;
