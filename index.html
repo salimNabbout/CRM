@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1629,10 +1630,115 @@ function renderTopbar(){
         <button class="btn${view==='lista'?' active':''}" onclick="setView('lista')" style="--btn-ic:#14B8A6">${ICONS.list} Lista</button>
       </div>
       <div style="display:flex;gap:2px"><button class="btn ghost" onclick="exportPDF()" title="Exportar PDF" style="--btn-ic:#DC2626">${ICONS.file} PDF</button><button class="btn ghost" onclick="exportCSV()" title="Exportar CSV" style="--btn-ic:#16A34A">${ICONS.download} CSV</button></div>
+      <button class="btn ghost" onclick="triggerImportExcel()" title="Importar Excel" style="--btn-ic:#16A34A">${ICONS.download} Importar</button>
+      <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this)">
       <button class="btn primary" onclick="openNew()">${ICONS.plus} Nova Prospecção</button>`:''}
     </div>`;
 }
 
+function triggerImportExcel(){
+  const inp=document.getElementById('excel-input');
+  if(inp){inp.value='';inp.click()}
+}
+async function importExcel(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('Planilha vazia','error');return}
+      // Normaliza cabeçalhos
+      const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      const findCol=(row,keys)=>{
+        const cols=Object.keys(row);
+        for(const k of keys){
+          const found=cols.find(c=>norm(c)===k);
+          if(found)return found;
+        }
+        return null;
+      };
+      const sample=rows[0];
+      const colNome=findCol(sample,['nome','name','contato','responsavel']);
+      const colEmpresa=findCol(sample,['empresa','company','razao social','cliente']);
+      const colEmail=findCol(sample,['email','e-mail','mail']);
+      if(!colNome){toast('Coluna "Nome" não encontrada na planilha','error');return}
+      // Mostra prévia antes de importar
+      openImportPreview(rows,{colNome,colEmpresa,colEmail});
+    }catch(err){
+      toast('Erro ao ler o arquivo: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function openImportPreview(rows,cols){
+  const existing=document.getElementById('import-overlay');
+  if(existing)existing.remove();
+  const preview=rows.slice(0,5);
+  const ov=document.createElement('div');
+  ov.id='import-overlay';ov.className='overlay';
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()});
+  ov.innerHTML=`<div class="modal" style="width:580px;max-height:85vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h2>Importar Excel</h2>
+        <button class="btn ghost" style="padding:6px" onclick="document.getElementById('import-overlay').remove()">${ICONS.close}</button>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px">${rows.length} linha${rows.length!==1?'s':''} encontrada${rows.length!==1?'s':''} · Prévia das primeiras ${Math.min(5,rows.length)}</div>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;flex:1">
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:600">Nome</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:600">Empresa</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:600">E-mail</th>
+          </tr></thead>
+          <tbody>${preview.map(r=>`<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px 10px;color:var(--text)">${esc(String(cols.colNome?r[cols.colNome]||'—':'—'))}</td>
+            <td style="padding:8px 10px;color:var(--text2)">${esc(String(cols.colEmpresa?r[cols.colEmpresa]||'—':'—'))}</td>
+            <td style="padding:8px 10px;color:var(--text2)">${esc(String(cols.colEmail?r[cols.colEmail]||'—':'—'))}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div style="background:var(--blue-bg);border:1px solid var(--blue-mid);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--blue)">
+        Todos os cards serão criados no estágio inicial (<strong>${STAGES[0]}</strong>).
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('import-overlay').remove()">Cancelar</button>
+      <button class="btn primary" id="import-confirm-btn" onclick="confirmImport(${JSON.stringify(rows).split('"').join('&quot;')},${JSON.stringify(cols).split('"').join('&quot;')})">Importar ${rows.length} card${rows.length!==1?'s':''}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function confirmImport(rows,cols){
+  const btn=document.getElementById('import-confirm-btn');
+  if(btn){btn.disabled=true;btn.textContent='Importando...';}
+  let ok=0,fail=0;
+  for(const row of rows){
+    const nome=String(cols.colNome?row[cols.colNome]||'':'').trim();
+    if(!nome)continue;
+    const p={
+      id:uid(),
+      nome,
+      empresa:String(cols.colEmpresa?row[cols.colEmpresa]||'':'').trim(),
+      email:String(cols.colEmail?row[cols.colEmail]||'':'').trim(),
+      telefone:'',origem:'',valor:null,
+      estagio:STAGES[0],
+      historico:[{id:uid(),tipo:'Criação',texto:'Importado via planilha Excel',data:new Date().toISOString(),autor:session?.user?.email||''}],
+      created_at:new Date().toISOString()
+    };
+    try{await dbUpsert(p);prospects.push(p);ok++}catch{fail++}
+  }
+  localStorage.setItem('crm_v2',JSON.stringify(prospects));
+  document.getElementById('import-overlay')?.remove();
+  renderFull();
+  toast(`${ok} card${ok!==1?'s':''} importado${ok!==1?'s':''}${fail?` · ${fail} erro${fail!==1?'s':''}`:''}`,'success');
+}
 function renderFull(){
   renderSidebar();
   // Guard páginas restritas
