@@ -519,8 +519,18 @@ const SB_API=`${SB_URL}/rest/v1/prospects`;
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'crm_auth'}});
 let session=null;
 function sbHdr(extra){
-  const tok=session?.access_token||SB_KEY;
+  const tok=session?.access_token;
+  if(!tok)throw new Error('Sessao expirada. Faca login novamente.');
   return {'apikey':SB_KEY,'Authorization':`Bearer ${tok}`,'Content-Type':'application/json',...(extra||{})};
+}
+function handleAuthError(e){
+  if(e&&/Sessao expirada|JWT expired|invalid/i.test(e.message||'')){
+    session=null;
+    try{showLogin()}catch{}
+    toast('Sessao expirada - faca login novamente','error');
+    return true;
+  }
+  return false;
 }
 
 async function dbFetch(){
@@ -538,14 +548,17 @@ async function dbFetch(){
 }
 async function dbUpsert(prospect){
   const r=await fetch(SB_API,{method:'POST',headers:sbHdr({'Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({...prospect,valor:prospect.valor===''||prospect.valor===null?null:Number(prospect.valor)||null})});
+  if(r.status===401||r.status===403){handleAuthError(new Error('JWT expired'));throw new Error('Sessao expirada.')}
   if(!r.ok)throw new Error(await r.text());
 }
 async function dbPatch(id,data){
   const r=await fetch(`${SB_API}?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:sbHdr({'Prefer':'return=minimal'}),body:JSON.stringify(data)});
+  if(r.status===401||r.status===403){handleAuthError(new Error('JWT expired'));throw new Error('Sessao expirada.')}
   if(!r.ok)throw new Error(await r.text());
 }
 async function dbDelete(id){
   const r=await fetch(`${SB_API}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:sbHdr()});
+  if(r.status===401||r.status===403){handleAuthError(new Error('JWT expired'));throw new Error('Sessao expirada.')}
   if(!r.ok)throw new Error(await r.text());
 }
 async function loadStagesConfig(){
@@ -865,7 +878,7 @@ function openTemplatePicker(tipo){
     <div class="modal-top">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <h2>Templates · ${esc(tipo)}</h2>
-        <button class="btn ghost" style="padding:6px" onclick="document.getElementById('tpl-menu').remove()">${ICONS.close}</button>
+        <button class="btn ghost" style="padding:6px" aria-label="Fechar" onclick="document.getElementById('tpl-menu').remove()">${ICONS.close}</button>
       </div>
     </div>
     <div class="modal-body">
@@ -931,7 +944,7 @@ function openProfile(){
     <div class="modal-top">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <h2>Meu perfil</h2>
-        <button class="btn ghost" style="padding:6px" onclick="document.getElementById('profile-overlay').remove()">${ICONS.close}</button>
+        <button class="btn ghost" style="padding:6px" aria-label="Fechar" onclick="document.getElementById('profile-overlay').remove()">${ICONS.close}</button>
       </div>
     </div>
     <div class="modal-body">
@@ -940,7 +953,7 @@ function openProfile(){
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">Trocar senha</div>
         <div id="prof-err" style="display:none" class="login-err"></div>
         <div id="prof-ok" style="display:none;background:var(--green-bg);border:1px solid var(--green-mid);color:var(--green);padding:10px 12px;border-radius:var(--radius);font-size:12px;margin-bottom:14px">Senha alterada com sucesso</div>
-        <div class="field"><label>Nova senha</label><input id="new-pwd" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+        <div class="field"><label>Nova senha</label><input id="new-pwd" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" minlength="8"></div>
         <div class="field"><label>Confirmar nova senha</label><input id="new-pwd2" type="password" autocomplete="new-password"></div>
       </div>
     </div>
@@ -958,7 +971,7 @@ async function changePassword(){
   const ok=document.getElementById('prof-ok');
   const btn=document.getElementById('prof-save');
   err.style.display='none';ok.style.display='none';
-  if(p1.length<6){err.textContent='Senha deve ter no mínimo 6 caracteres';err.style.display='block';return}
+  if(p1.length<8){err.textContent='Senha deve ter no mínimo 8 caracteres';err.style.display='block';return}
   if(p1!==p2){err.textContent='As senhas não coincidem';err.style.display='block';return}
   btn.disabled=true;btn.textContent='Salvando...';
   const {error}=await sb.auth.updateUser({password:p1});
@@ -1078,11 +1091,21 @@ async function createUser(){
   toast('Usuário criado com sucesso');
 }
 async function doLogout(){
-  await logAccess('logout');
-  await sb.auth.signOut();
+  try{await logAccess('logout')}catch{}
+  try{await sb.auth.signOut()}catch{}
   session=null;
   prospects=[];
-  localStorage.removeItem('crm_v2');
+  try{
+    const keep=new Set(['crm_theme']);
+    const toRemove=[];
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(!k)continue;
+      if(k.startsWith('crm_')&&!keep.has(k))toRemove.push(k);
+      if(k.startsWith('sb-')||k==='crm_auth')toRemove.push(k);
+    }
+    toRemove.forEach(k=>localStorage.removeItem(k));
+  }catch{}
   showLogin();
 }
 function showLogin(){
@@ -1096,17 +1119,21 @@ async function showApp(){
   await init();
 }
 function toggleSidebar(force){
-  const sb=document.getElementById('sidebar');
+  const sbEl=document.getElementById('sidebar');
   const bd=document.getElementById('sidebar-backdrop');
-  const open=force===undefined?!sb.classList.contains('open'):force;
-  sb.classList.toggle('open',open);
+  if(!sbEl||!bd)return;
+  const open=force===undefined?!sbEl.classList.contains('open'):force;
+  sbEl.classList.toggle('open',open);
   bd.classList.toggle('open',open);
 }
 
 let prospects=[],view='kanban',modal=null,editId=null,modalTab='dados';
 let newHistTxt='',newHistTipo='Nota',filterSearch='',filterStage='',filterOrigem='',showDesq=false;
 
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function uid(){
+  try{if(crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID()}catch{}
+  return Date.now().toString(36)+Math.random().toString(36).slice(2,12);
+}
 function fmt(v){if(!v||isNaN(v))return'—';return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
 function today(){return new Date().toISOString().slice(0,10)}
 function fmtDate(d){if(!d)return null;const[y,m,dd]=d.split('-');return`${dd}/${m}`}
@@ -1139,9 +1166,11 @@ function scoreStatus(s){
 }
 function openEdit(id){const p=prospects.find(x=>x.id===id);if(!p)return;editId=id;modalTab='dados';modal=JSON.parse(JSON.stringify(p));newHistTxt='';newHistTipo='Nota';renderModal()}
 function closeModal(){modal=null;editId=null;const ov=document.getElementById('modal-overlay');if(ov)ov.remove()}
+let _savingModal=false;
 async function saveModal(){
-  if(!modal.nome.trim()){alert('Nome é obrigatório');return}
-  if(modal.desqualificado&&!modal.motivoDesqualificacao){alert('Selecione o motivo da desqualificação');return}
+  if(_savingModal)return;
+  if(!modal.nome.trim()){toast('Nome e obrigatorio','error');return}
+  if(modal.desqualificado&&!modal.motivoDesqualificacao){toast('Selecione o motivo da desqualificacao','error');return}
   const record={...modal,id:editId||uid(),criadoEm:modal.criadoEm||today()};
   if(!editId){
     const entry={id:uid(),data:today(),hora:nowHHMM(),tipo:'Criação',texto:`Prospecto criado na etapa "${record.stage}"`,auto:true,user:currentUser()};
@@ -1160,22 +1189,33 @@ async function saveModal(){
       record.historico=[entry,...(record.historico||[])];
     }
   }
+  _savingModal=true;
+  document.querySelectorAll('#modal-overlay .modal-footer .btn').forEach(b=>b.disabled=true);
   try{
     await dbUpsert(record);
     if(editId){prospects=prospects.map(p=>p.id===editId?record:p)}else{prospects=[...prospects,record]}
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
     closeModal();renderFull();toast('Prospecto salvo com sucesso');
-  }catch(e){toast('Erro ao salvar: '+e.message,'error')}
+  }catch(e){
+    if(!handleAuthError(e))toast('Erro ao salvar: '+e.message,'error');
+    document.querySelectorAll('#modal-overlay .modal-footer .btn').forEach(b=>b.disabled=false);
+  }finally{_savingModal=false}
 }
 async function deleteProspect(){
+  if(_savingModal)return;
   if(!editId)return;
   if(!confirm('Excluir este prospecto?'))return;
+  _savingModal=true;
+  document.querySelectorAll('#modal-overlay .modal-footer .btn').forEach(b=>b.disabled=true);
   try{
     await dbDelete(editId);
     prospects=prospects.filter(p=>p.id!==editId);
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
     closeModal();renderFull();toast('Prospecto excluído');
-  }catch(e){toast('Erro ao excluir: '+e.message,'error')}
+  }catch(e){
+    if(!handleAuthError(e))toast('Erro ao excluir: '+e.message,'error');
+    document.querySelectorAll('#modal-overlay .modal-footer .btn').forEach(b=>b.disabled=false);
+  }finally{_savingModal=false}
 }
 function nowHHMM(){const d=new Date();return`${pad2(d.getHours())}:${pad2(d.getMinutes())}`}
 function currentUser(){return session?.user?.email||'Sistema'}
@@ -1222,6 +1262,13 @@ function dropOnCol(e,stage){
   e.currentTarget.classList.remove('col-drop');
   const id=dragId||e.dataTransfer.getData('text/plain');
   if(id)moveToStage(id,stage);
+}
+function dropOnColEl(e,colEl){
+  e.preventDefault();
+  colEl.classList.remove('col-drop');
+  const id=dragId||e.dataTransfer.getData('text/plain');
+  const stage=colEl?.dataset?.stage;
+  if(id&&stage)moveToStage(id,stage);
 }
 function setField(k,v){modal={...modal,[k]:v}}
 function toggleDesqualificado(val){
@@ -1503,8 +1550,24 @@ function exportPDF(){
   doc.save(`prospects-cetem-${new Date().toISOString().slice(0,10)}.pdf`);
   toast('PDF gerado com sucesso');
 }
-function exportCSV(){const cols=['Nome','Empresa','Contato','E-mail','Telefone','Etapa','Valor','Próximo Contato','Notas','Criado em'];const rows=prospects.map(p=>[p.nome,p.empresa,p.contato,p.email,p.telefone,p.stage,p.valor||'',fmtDateFull(p.proximoContato)||'',p.notas,fmtDateFull(p.criadoEm)||p.criadoEm||'']);const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='prospects.csv';a.click()}
+function exportCSV(){
+  const cols=['Nome','Empresa','Contato','E-mail','Telefone','Etapa','Valor','Próximo Contato','Notas','Criado em'];
+  const rows=prospects.map(p=>[p.nome,p.empresa,p.contato,p.email,p.telefone,p.stage,p.valor||'',fmtDateFull(p.proximoContato)||'',p.notas,fmtDateFull(p.criadoEm)||p.criadoEm||'']);
+  const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`prospects-${today()}.csv`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;const matchO=!filterOrigem||p.origem===filterOrigem;const matchD=showDesq?p.desqualificado:!p.desqualificado;return matchS&&matchSt&&matchO&&matchD})}
+
+let _searchTimer=null;
+function onSearchInput(v){
+  filterSearch=v;
+  if(_searchTimer)clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(()=>renderContent(),180);
+}
 
 const ICONS={
   logo:`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="50" rx="44" ry="34" transform="rotate(-18 50 50)" fill="none" stroke="#E30613" stroke-width="7" stroke-linecap="round"/><ellipse cx="50" cy="50" rx="46" ry="12" transform="rotate(-12 50 50)" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/></svg>`,
@@ -1611,9 +1674,14 @@ function setPage(p){
     if(!confirm('Você tem mudanças não salvas em Configurações. Sair mesmo assim?'))return;
   }
   if(p!=='settings'){editStages=null;settingsDirty=false}
+  destroyAllCharts();
   window.currentPage=p;
   renderSidebar();
   renderFull();
+}
+function destroyAllCharts(){
+  try{if(typeof dashCharts!=='undefined'){dashCharts.forEach(c=>{try{c.destroy()}catch{}});dashCharts.length=0}}catch{}
+  try{if(typeof analyticsCharts!=='undefined'){analyticsCharts.forEach(c=>{try{c.destroy()}catch{}});analyticsCharts.length=0}}catch{}
 }
 function renderTopbar(){
   const all=prospects;
@@ -1622,7 +1690,7 @@ function renderTopbar(){
   const cur=titles[page]||titles.pipeline;
   document.getElementById('topbar').innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;min-width:0">
-      <button class="btn ghost mobile-menu-btn" onclick="toggleSidebar()" title="Menu">${ICONS.list}</button>
+      <button class="btn ghost mobile-menu-btn" onclick="toggleSidebar()" title="Menu" aria-label="Abrir menu">${ICONS.list}</button>
       <div style="min-width:0">
         <div class="page-title">${cur.t}</div>
         <div class="page-sub">${cur.s}</div>
@@ -1801,12 +1869,12 @@ function renderFull(){
   }
 
   html+=`<div class="filters">
-    <div class="search-wrap">${ICONS.search}<input placeholder="Buscar por nome ou empresa..." oninput="filterSearch=this.value;renderContent()" value="${esc(filterSearch)}"></div>
-    <select onchange="filterStage=this.value;renderContent()">
+    <div class="search-wrap">${ICONS.search}<input placeholder="Buscar por nome ou empresa..." aria-label="Buscar prospecto" oninput="onSearchInput(this.value)" value="${esc(filterSearch)}"></div>
+    <select onchange="filterStage=this.value;renderContent()" aria-label="Filtrar por etapa">
       <option value="">Todas as etapas</option>
-      ${STAGES.map(s=>`<option value="${s}"${filterStage===s?' selected':''}>${s}</option>`).join('')}
+      ${STAGES.map(s=>`<option value="${esc(s)}"${filterStage===s?' selected':''}>${esc(s)}</option>`).join('')}
     </select>
-    <select onchange="filterOrigem=this.value;renderContent()">
+    <select onchange="filterOrigem=this.value;renderContent()" aria-label="Filtrar por origem">
       <option value="">Todas as origens</option>
       ${origensConfig.map(o=>`<option value="${esc(o)}"${filterOrigem===o?' selected':''}>${esc(o)}</option>`).join('')}
     </select>
@@ -2223,7 +2291,11 @@ function exportAnalyticsCSV(){
   const cols=['Data','Hora','Tipo','Prospecto','Empresa','Descrição','Usuário'];
   const rows=evts.map(e=>[e.data,e.hora||'',e.tipo,e.pname,e.pempresa||'',e.texto||'',e.user||'']);
   const csv=[cols,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`atividade-${mKey}.csv`;a.click();
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`atividade-${mKey}.csv`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
   toast(`CSV de ${monthLabel(d)} exportado`);
 }
 let agendaView='month',agendaDate=new Date();
@@ -2628,28 +2700,49 @@ function discardStageChanges(){
 async function commitStageChanges(){
   const names=editStages.map(s=>(s.name||'').trim());
   if(names.some(n=>!n)){toast('Todas as etapas precisam de nome','error');return}
-  if(new Set(names).size!==names.length){toast('Não pode haver nomes de etapa repetidos','error');return}
+  if(new Set(names).size!==names.length){toast('Nao pode haver nomes de etapa repetidos','error');return}
   const oldNames=stagesConfig.map(s=>s.name);
   const newNames=editStages.map(s=>s.name);
   const mapped={};
   oldNames.forEach((n,i)=>{
     if(newNames.includes(n)){mapped[n]=n}
     else if(newNames[i]){mapped[n]=newNames[i]}
-    else{mapped[n]=newNames[Math.max(0,Math.min(i,newNames.length-1))]}
+    else{mapped[n]=newNames[Math.max(0,Math.min(i-1,newNames.length-1))]||newNames[0]}
   });
   const toUpdate=prospects.filter(p=>mapped[p.stage]&&mapped[p.stage]!==p.stage);
+  const prevStagesConfig=JSON.parse(JSON.stringify(stagesConfig));
+  const prevProspects=prospects.map(p=>({...p}));
+  const originalStages=new Map(toUpdate.map(p=>[p.id,p.stage]));
+  const patched=[];
   try{
     stagesConfig=JSON.parse(JSON.stringify(editStages));refreshStages();
     await saveStagesConfig();
     for(const p of toUpdate){
-      await dbPatch(p.id,{stage:mapped[p.stage]});
-      p.stage=mapped[p.stage];
+      const newStage=mapped[p.stage];
+      await dbPatch(p.id,{stage:newStage});
+      p.stage=newStage;
+      patched.push(p.id);
     }
     localStorage.setItem('crm_v2',JSON.stringify(prospects));
     settingsDirty=false;
     toast('Pipeline atualizado');
     renderSidebar();renderTopbar();renderSettings();
-  }catch(e){toast('Erro ao salvar: '+e.message,'error')}
+  }catch(e){
+    console.error('[commitStageChanges] falhou, rollback:',e);
+    try{
+      for(const pid of patched){
+        const original=originalStages.get(pid);
+        if(original)await dbPatch(pid,{stage:original}).catch(()=>{});
+      }
+    }catch{}
+    stagesConfig=prevStagesConfig;refreshStages();
+    prospects=prevProspects;
+    try{await saveStagesConfig()}catch{}
+    localStorage.setItem('crm_v2',JSON.stringify(prospects));
+    settingsDirty=false;
+    renderSidebar();renderTopbar();renderSettings();
+    if(!handleAuthError(e))toast('Erro ao salvar - alteracoes desfeitas: '+e.message,'error');
+  }
 }
 function stageDragStart(e,i){stageDragIdx=i;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move'}
 function stageDragEnd(e){e.currentTarget.classList.remove('dragging');stageDragIdx=null}
@@ -2817,7 +2910,7 @@ function renderContent(){
     html+=`<div class="kanban">`;
     STAGES.forEach((stage,si)=>{
       const cards=vis.filter(p=>p.stage===stage);
-      html+=`<div class="col" style="border-top:3px solid ${stageColor(stage)}" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="dropOnCol(event,'${stage.replace(/'/g,"\\'")}')">
+      html+=`<div class="col" data-stage="${esc(stage)}" style="border-top:3px solid ${stageColor(stage)}" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="dropOnColEl(event,this)">
         <div class="col-head" data-tip="${esc(stageDesc(stage))}">
           <span class="col-dot" style="${dotStyle(stage)}"></span>
           <span class="col-name">${esc(stage)}</span>
@@ -2915,7 +3008,7 @@ function renderModal(){
     <div class="modal-top">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <h2>${editId?esc(modal.nome)||'Editar prospecção':'Nova Prospecção'}</h2>
-        <button class="btn ghost" style="padding:6px" onclick="closeModal()">${ICONS.close}</button>
+        <button class="btn ghost" style="padding:6px" aria-label="Fechar" onclick="closeModal()">${ICONS.close}</button>
       </div>
       <div class="tabs">
         <div class="tab${modalTab==='dados'?' active':''}" onclick="setTab('dados')">Dados</div>
@@ -2939,7 +3032,7 @@ function renderModal(){
         <div class="field"><label>Valor estimado (R$)</label><input type="number" value="${esc(modal.valor)}" oninput="setField('valor',this.value)" placeholder="0"></div>
       </div>
       <div class="modal-row">
-        <div class="field"><label>Etapa</label><select oninput="setField('stage',this.value)">${STAGES.map(s=>`<option value="${s}"${modal.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Etapa</label><select oninput="setField('stage',this.value)">${STAGES.map(s=>`<option value="${esc(s)}"${modal.stage===s?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
         <div class="field"><label>Próximo contato</label>
           <div style="display:flex;gap:6px">
             <input type="date" style="flex:2" value="${esc(modal.proximoContato)}" oninput="setField('proximoContato',this.value)">
@@ -3057,11 +3150,11 @@ function renderModal(){
     <div class="modal-footer">
       ${editId?`<button class="btn del-btn" onclick="deleteProspect()" title="Excluir prospecto">${ICONS.trash} Excluir</button>`:''}
       ${editId?`<div style="display:flex;gap:3px;align-items:center">
-        <button class="btn" onclick="openTemplatePicker('WhatsApp')" title="Enviar WhatsApp" style="--btn-ic:#25D366;padding:7px 9px">${ICONS.wa}</button>
-        <button class="btn" onclick="openTemplatePicker('E-mail')" title="Enviar e-mail" style="--btn-ic:#EA4335;padding:7px 9px">${ICONS.mail}</button>
-        <button class="btn" onclick="openTemplatePicker('LinkedIn')" title="Copiar mensagem LinkedIn" style="--btn-ic:#0A66C2;padding:7px 9px">${ICONS.linkedin}</button>
-        ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Agendar no Outlook" style="--btn-ic:#0078D4;padding:7px 9px">${ICONS.calendar}</button>`:''}
-        <button class="btn" onclick="generateBriefing()" title="Gerar Briefing PDF para handoff" style="--btn-ic:#DC2626;padding:7px 9px">${ICONS.file}</button>
+        <button class="btn" onclick="openTemplatePicker('WhatsApp')" title="Enviar WhatsApp" aria-label="Enviar WhatsApp" style="--btn-ic:#25D366;padding:7px 9px">${ICONS.wa}</button>
+        <button class="btn" onclick="openTemplatePicker('E-mail')" title="Enviar e-mail" aria-label="Enviar e-mail" style="--btn-ic:#EA4335;padding:7px 9px">${ICONS.mail}</button>
+        <button class="btn" onclick="openTemplatePicker('LinkedIn')" title="Copiar mensagem LinkedIn" aria-label="Copiar LinkedIn" style="--btn-ic:#0A66C2;padding:7px 9px">${ICONS.linkedin}</button>
+        ${modal.proximoContato?`<button class="btn" onclick="openOutlookEvent()" title="Agendar no Outlook" aria-label="Agendar no Outlook" style="--btn-ic:#0078D4;padding:7px 9px">${ICONS.calendar}</button>`:''}
+        <button class="btn" onclick="generateBriefing()" title="Gerar Briefing PDF para handoff" aria-label="Gerar Briefing PDF" style="--btn-ic:#DC2626;padding:7px 9px">${ICONS.file}</button>
       </div>`:''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn primary" onclick="saveModal()">Salvar</button>
@@ -3087,8 +3180,22 @@ async function bootstrap(){
   const {data}=await sb.auth.getSession();
   session=data.session||null;
   if(session){showApp()}else{showLogin()}
-  sb.auth.onAuthStateChange((_e,s)=>{session=s||null});
+  sb.auth.onAuthStateChange((_e,s)=>{
+    session=s||null;
+    if(!s&&document.getElementById('app-shell')?.style.display==='flex'){
+      try{showLogin()}catch{}
+    }
+  });
 }
+
+// Registro do Service Worker (PWA)
+if('serviceWorker' in navigator&&location.protocol!=='file:'){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err=>console.warn('[SW] registro falhou:',err));
+  });
+}
+
 bootstrap();
 </script>
 </body>
