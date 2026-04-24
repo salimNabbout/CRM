@@ -1605,7 +1605,43 @@ function exportCSV(){
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function filtered(){return prospects.filter(p=>{const s=filterSearch.toLowerCase();const matchS=!s||(p.nome||'').toLowerCase().includes(s)||(p.empresa||'').toLowerCase().includes(s);const matchSt=!filterStage||p.stage===filterStage;const matchO=!filterOrigem||p.origem===filterOrigem;const matchD=showDesq?p.desqualificado:!p.desqualificado;return matchS&&matchSt&&matchO&&matchD})}
+// Normaliza string: minúsculas, sem acentos, sem caracteres não alfanuméricos além de espaço.
+// Permite busca "joao" encontrar "João", "industria" encontrar "Indústria", etc.
+function normSearch(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')// remove diacríticos
+    .replace(/[^\w\s@.-]/g,' ')// permite @, ., - (para e-mail e telefone); resto vira espaço
+    .replace(/\s+/g,' ')
+    .trim();
+}
+// Constrói o "haystack" concatenando todos os campos buscáveis do prospect.
+function prospectHaystack(p){
+  const partes=[
+    p.nome,p.empresa,p.contato,p.email,p.telefone,
+    p.origem,p.setor,p.porte,p.stage,p.notas,
+    p.motivoDesqualificacao
+  ];
+  (p.contatosExtras||[]).forEach(c=>{
+    partes.push(c.nome,c.cargo,c.email,c.telefone,c.role);
+  });
+  return normSearch(partes.filter(Boolean).join(' '));
+}
+function filtered(){
+  // Busca multi-termo (cada palavra precisa aparecer) sobre todos os campos
+  const terms=normSearch(filterSearch).split(' ').filter(Boolean);
+  return prospects.filter(p=>{
+    const matchS=!terms.length||(()=>{
+      const hay=prospectHaystack(p);
+      return terms.every(t=>hay.includes(t));
+    })();
+    const matchSt=!filterStage||p.stage===filterStage;
+    const matchO=!filterOrigem||p.origem===filterOrigem;
+    const matchD=showDesq?p.desqualificado:!p.desqualificado;
+    return matchS&&matchSt&&matchO&&matchD;
+  });
+}
 
 let _searchTimer=null;
 function onSearchInput(v){
@@ -1938,7 +1974,7 @@ function renderFull(){
   }
 
   html+=`<div class="filters">
-    <div class="search-wrap">${ICONS.search}<input placeholder="Buscar por nome ou empresa..." aria-label="Buscar prospecto" oninput="onSearchInput(this.value)" value="${esc(filterSearch)}"></div>
+    <div class="search-wrap">${ICONS.search}<input placeholder="Buscar (nome, empresa, cargo, e-mail, telefone, setor, notas...)" aria-label="Buscar em todos os campos do prospecto" oninput="onSearchInput(this.value)" value="${esc(filterSearch)}"></div>
     <select onchange="filterStage=this.value;renderContent()" aria-label="Filtrar por etapa">
       <option value="">Todas as etapas</option>
       ${STAGES.map(s=>`<option value="${esc(s)}"${filterStage===s?' selected':''}>${esc(s)}</option>`).join('')}
