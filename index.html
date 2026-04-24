@@ -159,6 +159,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .card:active{transform:translateY(0);box-shadow:var(--shadow)}
 .card:last-child{margin-bottom:0}
+/* Variante compacta do Kanban: apenas nome + empresa visíveis, sem margens extras */
+.card.card-compact{padding:7px 10px 7px 9px}
+.card.card-compact .card-header{margin-bottom:0}
+.card-badge-desq{color:var(--red);background:var(--red-bg);font-size:11px;font-weight:700;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0}
 .card-header{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:6px}
 .card-avatar{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex-shrink:0;letter-spacing:0.3px}
 .av-blue{background:var(--blue-bg);color:var(--blue)}
@@ -2936,29 +2940,19 @@ function renderContent(){
           const dl=dateLabel(p.proximoContato);
           const av=avColor(p.id);
           const hl=(p.historico||[]).length;
-          html+=`<div class="card" data-card-id="${p.id}" draggable="true" style="--card-c:${stageColor(p.stage)}" ondragstart="dragStart(event,'${p.id}')" ondragend="dragEnd(event)" onclick="openEdit('${p.id}')">
+          // Card compacto: apenas avatar + nome + empresa visíveis.
+          // Todos os detalhes (valor, data, BANT, badges, mover etapa, etc.) continuam
+          // acessíveis ao abrir o modal. Drag-and-drop entre colunas segue funcionando.
+          // title= mostra tooltip com os dados extras no hover, sem poluir visual.
+          const tip=[p.valor?fmt(p.valor):null,dl||'Sem data',p.origem||null,hl?`${hl} interaç${hl>1?'ões':'ão'}`:null].filter(Boolean).join(' · ');
+          html+=`<div class="card card-compact" data-card-id="${p.id}" draggable="true" style="--card-c:${stageColor(p.stage)}" ondragstart="dragStart(event,'${p.id}')" ondragend="dragEnd(event)" onclick="openEdit('${p.id}')" title="${esc(tip)}">
             <div class="card-header">
               <div class="card-avatar ${av}">${esc(initials(p.nome))}</div>
               <div class="card-info">
                 <div class="card-name">${esc(p.nome)}</div>
                 <div class="card-empresa">${esc(p.empresa)||'—'}</div>
               </div>
-            </div>
-            <div class="card-divider"></div>
-            <div class="card-footer">
-              <span class="card-val">${fmt(p.valor)}</span>
-              ${dl?`<span class="date-badge date-${ds}">${esc(dl)}</span>`:`<span class="date-none">Sem data</span>`}
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--text3);flex-wrap:wrap">
-              ${p.desqualificado?`<span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:99px;font-weight:600;font-size:10.5px">✕ ${esc(p.motivoDesqualificacao||'Desqualificado')}</span>`:''}
-              ${(()=>{const s=bantScore(p);if(!s)return '';const st=scoreStatus(s);return `<span style="background:${st.bg};color:${st.color};padding:2px 7px;border-radius:99px;font-weight:700;font-size:10.5px" title="BANT: ${st.label}">${s}</span>`})()}
-              ${p.origem?`<span style="background:var(--surface2);color:var(--text2);padding:2px 8px;border-radius:99px;font-weight:500;font-size:10.5px">${esc(p.origem)}</span>`:''}
-              ${(p.contatosExtras||[]).length?`<span title="Contatos extras">👥 ${(p.contatosExtras||[]).length+1}</span>`:''}
-              ${hl?`<span>${hl} interaç${hl>1?'ões':'ão'}</span>`:''}
-            </div>
-            <div class="move-btns" onclick="event.stopPropagation()">
-              ${si>0?`<button class="move-btn" onclick="moveStage('${p.id}',-1,event)">${ICONS.arrowL} ${esc(stageShort(STAGES[si-1]))}</button>`:''}
-              ${si<STAGES.length-1?`<button class="move-btn" onclick="moveStage('${p.id}',1,event)">${esc(stageShort(STAGES[si+1]))} ${ICONS.arrowR}</button>`:''}
+              ${p.desqualificado?`<span class="card-badge-desq" title="${esc(p.motivoDesqualificacao||'Desqualificado')}">✕</span>`:''}
             </div>
           </div>`;
         });
