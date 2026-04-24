@@ -155,30 +155,30 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .col-count{font-size:11px;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:2px 9px;color:var(--text2)}
 
 /* Cards */
-.card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--card-c,var(--border));border-radius:var(--radius-lg);padding:14px 14px 14px 12px;margin-bottom:10px;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow)}
+.card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--card-c,var(--border));border-radius:10px;padding:8px 10px 8px 9px;margin-bottom:6px;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow)}
 .card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .card:active{transform:translateY(0);box-shadow:var(--shadow)}
 .card:last-child{margin-bottom:0}
-.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
-.card-avatar{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;letter-spacing:0.3px}
+.card-header{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:6px}
+.card-avatar{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex-shrink:0;letter-spacing:0.3px}
 .av-blue{background:var(--blue-bg);color:var(--blue)}
 .av-amber{background:var(--amber-bg);color:var(--amber)}
 .av-green{background:var(--green-bg);color:var(--green)}
 .av-purple{background:var(--purple-bg);color:var(--purple)}
 .av-red{background:var(--red-bg);color:var(--red)}
 .card-info{flex:1;min-width:0}
-.card-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
-.card-empresa{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-divider{height:1px;background:var(--border);margin:10px 0}
+.card-name{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px;line-height:1.2}
+.card-empresa{font-size:11.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.card-divider{height:1px;background:var(--border);margin:5px 0}
 .card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.card-val{font-size:12px;font-weight:600;color:var(--text2)}
-.date-badge{font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px}
+.card-val{font-size:11.5px;font-weight:600;color:var(--text2)}
+.date-badge{font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:99px}
 .date-ok{background:var(--green-bg);color:var(--green)}
 .date-today{background:var(--amber-bg);color:var(--amber)}
 .date-late{background:var(--red-bg);color:var(--red)}
-.date-none{color:var(--text3);font-size:11px}
-.move-btns{display:flex;gap:4px;margin-top:10px}
-.move-btn{font-size:11px;font-weight:500;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:3px}
+.date-none{color:var(--text3);font-size:10.5px}
+.move-btns{display:flex;gap:4px;margin-top:6px}
+.move-btn{font-size:10.5px;font-weight:500;padding:3px 8px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:3px}
 .move-btn:hover{background:var(--surface2);border-color:var(--border2);color:var(--text)}
 .card[draggable="true"]{cursor:grab}
 .card[draggable="true"]:active{cursor:grabbing}
@@ -514,7 +514,19 @@ const SB_KEY='sb_publishable_4p4W83oDOtlSNRJUj16TFA_Ptve7SPv';
 let _serviceKey=sessionStorage.getItem('crm_sk')||'';
 // Lista de administradores - têm acesso a Dashboard e Configurações
 const ADMINS=['salim@cetemrj.com.br'];
+// Mapa de e-mails para nomes completos exibidos na UI
+const USER_NAMES={
+  'salim@cetemrj.com.br':'Salim Nabbout',
+  'marcia@cetemrj.com.br':'Marcia Reis'
+};
 function isAdmin(){return ADMINS.includes((session?.user?.email||'').toLowerCase())}
+function displayName(email){
+  const e=(email||'').toLowerCase();
+  if(USER_NAMES[e])return USER_NAMES[e];
+  // Fallback: capitaliza a parte antes do @ (ex: 'joao.silva' -> 'Joao Silva')
+  const base=(email||'').split('@')[0].replace(/[._-]+/g,' ');
+  return base.split(' ').filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+}
 const SB_API=`${SB_URL}/rest/v1/prospects`;
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'crm_auth'}});
 let session=null;
@@ -1657,7 +1669,7 @@ function renderSidebar(){
     <div class="s-user">
       <div class="s-user-av">${initial}</div>
       <div class="s-user-info">
-        <div class="s-user-name">${esc(email.split('@')[0])}${admin?' <span style="background:var(--accent);color:#fff;font-size:9px;padding:2px 6px;border-radius:99px;font-weight:700;margin-left:4px;letter-spacing:0.5px">ADMIN</span>':''}</div>
+        <div class="s-user-name">${esc(displayName(email))}${admin?' <span style="background:var(--accent);color:#fff;font-size:9px;padding:2px 6px;border-radius:99px;font-weight:700;margin-left:4px;letter-spacing:0.5px">ADMIN</span>':''}</div>
         <div class="s-user-email">${esc(email)}</div>
       </div>
     </div>
