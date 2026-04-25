@@ -1813,6 +1813,7 @@ function triggerImportExcel(){
 async function importExcel(input){
   const file=input.files[0];
   if(!file)return;
+  if(typeof XLSX==='undefined'){toast('Biblioteca XLSX não carregada. Recarregue a página.','error');return}
   const reader=new FileReader();
   reader.onload=async function(e){
     try{
@@ -1820,19 +1821,47 @@ async function importExcel(input){
       const wb=XLSX.read(data,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      if(!rows.length){toast('Planilha vazia','error');return}
-      const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-      const findCol=(row,keys)=>{
+      if(!rows.length){toast('Planilha vazia ou sem linhas de dados','error');return}
+      // Normalização robusta: minúscula + remove acentos + remove caracteres não-alfanum
+      // (usando Unicode escapes em vez de caracteres literais, que podem quebrar com encoding)
+      const norm=s=>String(s||'')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g,'')
+        .replace(/[^a-z0-9]/g,'');
+      // findCol aceita tanto match EXATO quanto INCLUDES (mais tolerante)
+      const findCol=(row,aliases)=>{
         const colKeys=Object.keys(row);
-        for(const k of keys){const found=colKeys.find(c=>norm(c)===k);if(found)return found;}
+        const normalized=colKeys.map(k=>({orig:k,norm:norm(k)}));
+        // 1ª tentativa: match exato
+        for(const a of aliases){
+          const hit=normalized.find(c=>c.norm===norm(a));
+          if(hit)return hit.orig;
+        }
+        // 2ª tentativa: includes (ex: "Nome Completo" casa com "nome")
+        for(const a of aliases){
+          const hit=normalized.find(c=>c.norm.includes(norm(a)));
+          if(hit)return hit.orig;
+        }
         return null;
       };
       const sample=rows[0];
-      const colNome=findCol(sample,['nome','name','contato','responsavel']);
-      const colEmpresa=findCol(sample,['empresa','company','razao social','cliente']);
-      const colEmail=findCol(sample,['email','e-mail','mail']);
-      if(!colNome){toast('Coluna "Nome" não encontrada na planilha','error');return}
-      _importData={rows,cols:{colNome,colEmpresa,colEmail}};
+      const cols={
+        colNome:findCol(sample,['nome','name','contato','responsavel','lead']),
+        colEmpresa:findCol(sample,['empresa','company','razaosocial','cliente','organizacao']),
+        colEmail:findCol(sample,['email','mail','correio']),
+        colTelefone:findCol(sample,['telefone','fone','celular','whatsapp','tel','phone']),
+        colCargo:findCol(sample,['cargo','funcao','titulo','posicao','role']),
+        colSetor:findCol(sample,['setor','segmento','industria','industry','area']),
+        colOrigem:findCol(sample,['origem','canal','source','fonte']),
+        colNotas:findCol(sample,['notas','observacao','observacoes','comentario','notes','obs'])
+      };
+      if(!cols.colNome){
+        const found=Object.keys(sample).slice(0,8).join(', ');
+        toast(`Coluna "Nome" não encontrada. Colunas detectadas: ${found||'nenhuma'}`,'error');
+        return;
+      }
+      _importData={rows,cols};
       openImportPreview();
     }catch(err){toast('Erro ao ler o arquivo: '+err.message,'error')}
   };
@@ -1856,17 +1885,34 @@ function openImportPreview(){
       <div style="font-size:13px;color:var(--text2);margin-top:6px">${rows.length} linha${rows.length!==1?'s':''} encontrada${rows.length!==1?'s':''} · Prévia das primeiras ${Math.min(5,rows.length)}</div>
     </div>
     <div class="modal-body" style="overflow-y:auto;flex:1">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--text2);line-height:1.5">
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px">Colunas detectadas</div>
+        ${[
+          ['Nome (obrigatório)','colNome'],
+          ['Empresa','colEmpresa'],
+          ['E-mail','colEmail'],
+          ['Telefone','colTelefone'],
+          ['Cargo','colCargo'],
+          ['Setor','colSetor'],
+          ['Origem','colOrigem'],
+          ['Notas','colNotas']
+        ].map(([lbl,k])=>`<div>• ${lbl}: ${cols[k]?`<b style="color:var(--green)">${esc(cols[k])}</b>`:'<i style="color:var(--text3)">não encontrada</i>'}</div>`).join('')}
+      </div>
       <div style="overflow-x:auto;margin-bottom:16px">
-        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="border-bottom:2px solid var(--border)">
-            <th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:600">Nome</th>
-            <th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:600">Empresa</th>
-            <th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:600">E-mail</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--text2);font-weight:600">Nome</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--text2);font-weight:600">Empresa</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--text2);font-weight:600">Cargo</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--text2);font-weight:600">E-mail</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--text2);font-weight:600">Tel.</th>
           </tr></thead>
           <tbody>${preview.map(r=>`<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:8px 10px;color:var(--text)">${esc(String(cols.colNome?r[cols.colNome]||'—':'—'))}</td>
-            <td style="padding:8px 10px;color:var(--text2)">${esc(String(cols.colEmpresa?r[cols.colEmpresa]||'—':'—'))}</td>
-            <td style="padding:8px 10px;color:var(--text2)">${esc(String(cols.colEmail?r[cols.colEmail]||'—':'—'))}</td>
+            <td style="padding:6px 8px;color:var(--text)">${esc(String(cols.colNome?r[cols.colNome]||'—':'—'))}</td>
+            <td style="padding:6px 8px;color:var(--text2)">${esc(String(cols.colEmpresa?r[cols.colEmpresa]||'—':'—'))}</td>
+            <td style="padding:6px 8px;color:var(--text2)">${esc(String(cols.colCargo?r[cols.colCargo]||'—':'—'))}</td>
+            <td style="padding:6px 8px;color:var(--text2)">${esc(String(cols.colEmail?r[cols.colEmail]||'—':'—'))}</td>
+            <td style="padding:6px 8px;color:var(--text2)">${esc(String(cols.colTelefone?r[cols.colTelefone]||'—':'—'))}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
@@ -1886,26 +1932,63 @@ async function confirmImport(){
   const {rows,cols}=_importData;
   const btn=document.getElementById('import-confirm-btn');
   if(btn){btn.disabled=true;btn.textContent='Importando...';}
+  const grab=(row,col)=>String(col?row[col]||'':'').trim();
+  const today_=today();
+  const user=currentUser();
   let ok=0,fail=0;
+  const firstErrors=[];
   for(const row of rows){
-    const nome=String(cols.colNome?row[cols.colNome]||'':'').trim();
+    const nome=grab(row,cols.colNome);
     if(!nome)continue;
     const p={
       id:uid(),
       nome,
-      empresa:String(cols.colEmpresa?row[cols.colEmpresa]||'':'').trim(),
-      email:String(cols.colEmail?row[cols.colEmail]||'':'').trim(),
-      telefone:'',origem:'',valor:null,
-      estagio:STAGES[0],
-      historico:[{id:uid(),tipo:'Criação',texto:'Importado via planilha Excel',data:new Date().toISOString(),autor:session?.user?.email||''}],
-      created_at:new Date().toISOString()
+      empresa:grab(row,cols.colEmpresa),
+      contato:grab(row,cols.colCargo),
+      email:grab(row,cols.colEmail),
+      telefone:grab(row,cols.colTelefone),
+      setor:grab(row,cols.colSetor),
+      origem:grab(row,cols.colOrigem)||'Outro',
+      notas:grab(row,cols.colNotas),
+      valor:null,
+      porte:'',
+      stage:STAGES[0],
+      desqualificado:false,
+      motivoDesqualificacao:'',
+      bantB:false,bantA:false,bantN:false,bantT:false,
+      contatosExtras:[],
+      proximoContato:'',
+      horaContato:'',
+      criadoEm:today_,
+      historico:[{
+        id:uid(),
+        data:today_,
+        hora:nowHHMM(),
+        tipo:'Criação',
+        texto:`Importado via planilha Excel (etapa "${STAGES[0]}")`,
+        auto:true,
+        user
+      }]
     };
-    try{await dbUpsert(p);prospects.push(p);ok++}catch{fail++}
+    try{
+      await dbUpsert(p);
+      prospects.push(p);
+      ok++;
+    }catch(e){
+      fail++;
+      if(firstErrors.length<3)firstErrors.push(`${nome}: ${e.message.slice(0,80)}`);
+    }
   }
   localStorage.setItem('crm_v2',JSON.stringify(prospects));
   document.getElementById('import-overlay')?.remove();
   renderFull();
-  toast(`${ok} card${ok!==1?'s':''} importado${ok!==1?'s':''}${fail?` · ${fail} erro${fail!==1?'s':''}`:''}`,'success');
+  if(fail&&firstErrors.length){
+    console.error('[import] Erros:',firstErrors);
+    toast(`${ok} importado${ok!==1?'s':''} · ${fail} falha${fail!==1?'s':''} (veja Console)`,'error');
+  }else{
+    toast(`${ok} card${ok!==1?'s':''} importado${ok!==1?'s':''} com sucesso`,'success');
+  }
+  _importData=null;
 }
 function renderFull(){
   renderSidebar();
